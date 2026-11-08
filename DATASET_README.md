@@ -1,104 +1,98 @@
 # Tony's dataset preparation and validation
 
-## What changed
+## Data and setup
 
-Tony excluded an admission because its
-discharge precedes admission in the raw MIMIC admissions table. The dataset
-decreased from **52,028 to 52,027 admissions** in both CSV and combined Parquet
-exports. Originals, patient split assignments, and other admissions are unchanged.
+Get exports from Tony / Olivia; datasets are not in GitHub. Run from the project
+folder with Python 3.10+ and `python -m pip install pandas pyarrow`.
 
-The **12 admissions without source diagnosis records are retained** as missing
-data. Repeated patients are allowed: the SQL selects the latest ICU stay **per
-admission**, not the latest admission per patient.
+The cleaned dataset has **52,027 admissions**. One admission with discharge before
+admission was excluded; originals and splits are preserved. The 12 admissions
+without source diagnoses remain. Patients can repeat across admissions, but must
+stay in one split. Measurement features summarize the latest ICU stay per admission.
+The documented cohort requires notes stored by discharge +3 days and excludes
+recorded deaths through that calendar-date cutoff; the outcome ends at discharge +30 days.
 
-## Setup
+## Get cleaned exports
 
-Get the data from Tony / Olivia; it is not included in GitHub. Run commands from
-the project folder using Python 3.10+:
+**Already cleaned:** put the CSV and/or both Parquet parts in `data/cleaned/`.
+Skip cleaning and use these files for training. Both Parquet parts form one dataset;
+CSV is an alternative export, not additional admissions.
 
-```powershell
-python -m pip install pandas pyarrow
-```
-
-## If you have the original exports
-
-Place these three files in the project folder:
-
-- `dataset_splits.csv`
-- `dataset_splits_000000000000.parquet`
-- `dataset_splits_000000000001.parquet`
-
-The cleaning script requires both formats and checks that each export loses
-exactly one admission:
+**Original exports:** place `dataset_splits.csv`,
+`dataset_splits_000000000000.parquet`, and `dataset_splits_000000000001.parquet`
+in the project root, then run:
 
 ```powershell
 python exclude_invalid_admission.py
 ```
 
-It writes cleaned copies to `data/cleaned/`, plus `exclusion_manifest.json`
-recording the exclusion and row counts. It refuses to overwrite an existing
-output folder; use `--output data/cleaned_v2` for a new destination if needed.
+Cleaning requires both formats. It writes `data/cleaned/` and an exclusion manifest.
+It refuses to overwrite an existing folder; choose `--output data/cleaned_v2` if needed.
 
-## If you already have cleaned exports
+## Validate and summarize
 
-Skip the cleaning script. Put the cleaned CSV and/or both cleaned Parquet parts
-in `data/cleaned/`, keeping their original filenames. Use these files for training.
-Both Parquet parts together form one dataset; CSV is an alternative export.
-
-## Validate and inspect the cleaned dataset
-
-Run the commands for whichever format you have. If you have both, check them
-separately:
+Run the pair for your format, or both pairs separately:
 
 ```powershell
-# CSV
 python check_admission_keys.py data/cleaned/dataset_splits.csv
 python summarize_dataset.py data/cleaned/dataset_splits.csv --output validation_output/cleaned_csv
 
-# Parquet: combine both parts for each check
 python check_admission_keys.py "data/cleaned/dataset_splits_*.parquet"
 python summarize_dataset.py "data/cleaned/dataset_splits_*.parquet" --output validation_output/cleaned_parquet
 ```
 
-Expect **52,027 rows**, unique admission IDs and patient/admission pairs, no missing
-keys or splits, and no patient in multiple splits. These checks do not independently
-verify source note/label linkage or complete the full validation checklist.
+Expect 52,027 rows, unique admission IDs/patient-admission pairs, no missing keys
+or splits, and no patients crossing splits. Source note/label linkage needs separate checks.
 
-Each summary folder contains statistics overall and by split:
+Reports cover the whole dataset and each split:
 
 | Report | Contents |
 |---|---|
-| `feature_missingness.csv` | Missing counts/percentages, including individual labs and vitals |
-| `mortality_prevalence.csv` | Positive, negative, missing and invalid labels; prevalence uses valid labels only |
-| `note_lengths.csv` | Minimum, mean, median, 95th percentile and maximum whitespace token counts |
+| `feature_missingness.csv` | Missing columns and individual labs/vitals; empty arrays reported separately |
+| `mortality_prevalence.csv` | Positive/negative/missing/invalid labels; prevalence uses valid labels only |
+| `note_lengths.csv` | Whitespace-token min/mean/median/p95/max; missing notes counted separately |
 
-Missing values include nulls, empty/whitespace text, and `NULL`/`null`. Empty
-diagnosis/measurement arrays are reported separately. A measurement is missing
-when its feature object is absent, its missingness flag is set, or all four numeric
-summaries are null. Missing notes are counted separately and excluded from length
-statistics. Whitespace counts describe text length; model tokenization belongs to
-the training pipeline.
+Nulls, blank text and `NULL`/`null` are missing. Measurements are missing if absent,
+flagged missing, or all numeric summaries are null. Whitespace counts describe
+length; training uses the chosen model's tokenizer. Inputs are never changed.
 
-Checks and summaries leave inputs unchanged. To inspect the originals, pass their
-paths instead and choose a different summary output folder. CSV/Parquet files and
-`data/` are ignored by Git; share the cleaned exports through the team's authorized
-data-sharing location.
+## Two draft masking policies
 
-## Sample overlap audit
+Both scripts reuse Olivia's `audit_redundancy.py` extractor and default to the same
+75 training notes in `redundancy_audit_v3/sample.jsonl`. They propose different masks:
 
-`audit_redundancy.py` recognizes M/F and full-word sex headers (reported as
-`concept=gender`) and the dataset's `diagnoses[].diagnosis` descriptions. Diagnosis
-hits remain uncertain because literal matching does not establish assertion or
-encounter relevance. Measurement evidence rules are unchanged.
+| Script | Numerical values | Diagnoses | Sex headers |
+|---|---|---|---|
+| `audit_redundancy_verified.py` | Only strict redundant matches with unique raw-event and last-feature evidence | Keep | Mask agreeing patient header values |
+| `audit_redundancy_concept.py` | Mask when the concept has a nonmissing structured counterpart, even if values/times differ | Mask literal description hits when no exclusion cue is detected | Mask agreeing patient header values |
 
-To reproduce the corrected audit using the previously exported sample events:
+Both retain mentions flagged as negated, historical, hypothetical, about another
+person, or ambiguous. Context rules are basic heuristics requiring sample review.
+"Verified" means supported by the script's evidence rules, not clinical certainty.
+The broader policy tests information removal; it does not prove the removed values
+are duplicates. It was previously named `audit_redundancy_improved.py`.
 
 ```powershell
-python audit_redundancy.py data/cleaned/dataset_splits_000000000000.parquet data/cleaned/dataset_splits_000000000001.parquet --events data/source_events.csv --out data/redundancy_with_events_fixed
+python audit_redundancy_verified.py --events data/source_events.csv --out data/audit_verified
+python audit_redundancy_concept.py --events data/source_events.csv --out data/audit_concept
 ```
 
-Choose a new output directory if it already exists. Review `mentions.csv` using
-`context_marked`, which shows complete matching lines plus neighboring lines and
-marks the span with `[[...]]`. `start`/`end` still reference the unchanged original
-note; `context_start`/`context_end` locate the unmarked context. This is a 75-note
-candidate audit, not full-cohort annotations or filtered notes.
+`--events` supplies source evidence. Without it, verified numerical masks are
+unavailable; concept decisions are unchanged. Use `--sample` for another JSONL
+sample and matching event coverage. Output folders must be new; change `--out`
+to rerun. Event-export instructions are in `data/linkage_audit/EVENTS_README.md`
+when that local audit bundle is available.
+
+Each run writes `mentions.csv` and `summary.json`. Read `mask_decision`,
+`decision_reason`, `mask_span`, and `mask_preview`; compare `concept_overlap` with
+the unchanged strict `suggested_label` and `event_linkage`. `context_marked` highlights
+extracted mentions. `mask_start`/`mask_end` are original-note character offsets,
+with an exclusive end. `keep` and `review` retain text; human-review fields stay blank.
+
+**These are sample proposals and previews, not filtered full notes or full-cohort
+statistics.** Review masks and retained mentions before scaling. A separate generator
+must merge overlapping spans and apply the agreed replacement consistently.
+Original notes and earlier audit outputs remain unchanged.
+
+CSV/Parquet files and `data/` are ignored by Git. Share exports through the team's
+authorized location. Run tests with `python -m unittest discover -v`.
