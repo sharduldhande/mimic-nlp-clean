@@ -2,7 +2,7 @@
 
 ## What changed
 
-Tony excluded admission `(subject_id=13659453, hadm_id=23252384)` because its
+Tony excluded an admission because its
 discharge precedes admission in the raw MIMIC admissions table. The dataset
 decreased from **52,028 to 52,027 admissions** in both CSV and combined Parquet
 exports. Originals, patient split assignments, and other admissions are unchanged.
