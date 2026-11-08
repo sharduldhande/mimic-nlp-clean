@@ -47,7 +47,7 @@ BP = re.compile(
     re.I,
 )
 AGE = re.compile(r"\b(?P<value>\d{1,3})(?:[- ]year[- ]old|\s+y/o\b)", re.I)
-SEX = re.compile(r"\b(?:sex|gender)[ \t]*:[ \t]*(?P<value>female|male)\b"
+SEX = re.compile(r"\b(?:sex|gender)[ \t]*:[ \t]*(?P<value>female|male|[MF])\b"
                  r"|\b\d{1,3}[- ]year[- ]old[ \t]+(?P<adjacent>female|male|woman|man)\b", re.I)
 ADMIN = re.compile(
     r"^[ \t]*(?P<name>admission type|admission location|insurance)[ \t]*:"
@@ -61,7 +61,8 @@ FIELDS = IDS + ["concept", "start", "end", "span", "context", "note_value",
                 "note_unit", "note_time", "structured_candidates", "suggested_label",
                 "reason", "note_time_source", "value_vs_range",
                 "event_linkage", "event_id", "specimen_id", "linked_event_time",
-                "linked_event_unit", "linked_feature", "link_evidence", "review_label", "review_feature", "review_comment"]
+                "linked_event_unit", "linked_feature", "link_evidence", "review_label", "review_feature", "review_comment",
+                "context_start", "context_end", "context_marked"]
 
 
 def first(record, *keys):
@@ -118,14 +119,14 @@ def diagnoses(value):
     """Use the recorded descriptions and codes as a literal seed dictionary."""
     value = nested(value, "diagnoses") or []
     if isinstance(value, dict):
-        value = [value] if any(k in value for k in ("description", "long_title", "icd_code", "code")) else [
+        value = [value] if any(k in value for k in ("diagnosis", "description", "long_title", "icd_code", "code")) else [
             {"icd_code": code, "description": description} for code, description in value.items()
         ]
     for index, item in enumerate(value):
         if isinstance(item, str):
             yield f"diagnoses[{index}]", item
         elif isinstance(item, dict):
-            for key in ("description", "long_title", "icd_code", "code"):
+            for key in ("diagnosis", "description", "long_title", "icd_code", "code"):
                 if isinstance(item.get(key), str):
                     yield f"diagnoses[{index}].{key}", item[key]
 
@@ -365,6 +366,22 @@ def link_measurement(note, match, row, concept, value, unit, time, source, candi
     return result
 
 
+def review_context(note, start, end):
+    """Show complete matching lines plus one neighboring line on each side."""
+    line_start = note.rfind("\n", 0, start) + 1
+    context_start = note.rfind("\n", 0, max(0, line_start - 1)) + 1
+    line_end = note.find("\n", end)
+    context_end = note.find("\n", line_end + 1) if line_end != -1 else -1
+    if context_end == -1:
+        context_end = len(note)
+    return {
+        "context": note[context_start:context_end],
+        "context_start": context_start, "context_end": context_end,
+        "context_marked": (note[context_start:start] + "[[" + note[start:end]
+                           + "]]" + note[end:context_end]),
+    }
+
+
 def audit_row(row, events=()):
     note = row["discharge_note"]
     indexed = measurements(row.get("measurements"))
@@ -374,7 +391,7 @@ def audit_row(row, events=()):
         return {
             **{key: row.get(key) for key in IDS},
             "concept": concept, "start": start, "end": end, "span": note[start:end],
-            "context": note[max(0, start - 100):end + 100],
+            **review_context(note, start, end),
             "note_value": value, "note_unit": unit, "note_time": time,
             "structured_candidates": json.dumps(candidates, default=str, ensure_ascii=False),
             "suggested_label": label, "reason": reason,
@@ -441,7 +458,7 @@ def sample_rows(files, count, seed, split):
     sample, seen = [], set()
     for path in files:
         columns = [key for key in COLUMNS if key in path.schema_arrow.names]
-        required = {"hadm_id", "note_id", "discharge_note", "measurements", "diagnoses", "split"}
+        required = {"subject_id", "hadm_id", "note_id", "discharge_note", "measurements", "diagnoses", "split"}
         if missing := required.difference(columns):
             raise ValueError(f"Missing columns: {sorted(missing)}")
         for batch in path.iter_batches(batch_size=128, columns=columns):

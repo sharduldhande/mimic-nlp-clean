@@ -83,3 +83,22 @@ Checks and summaries leave inputs unchanged. To inspect the originals, pass thei
 paths instead and choose a different summary output folder. CSV/Parquet files and
 `data/` are ignored by Git; share the cleaned exports through the team's authorized
 data-sharing location.
+
+## Sample overlap audit
+
+`audit_redundancy.py` recognizes M/F and full-word sex headers (reported as
+`concept=gender`) and the dataset's `diagnoses[].diagnosis` descriptions. Diagnosis
+hits remain uncertain because literal matching does not establish assertion or
+encounter relevance. Measurement evidence rules are unchanged.
+
+To reproduce the corrected audit using the previously exported sample events:
+
+```powershell
+python audit_redundancy.py data/cleaned/dataset_splits_000000000000.parquet data/cleaned/dataset_splits_000000000001.parquet --events data/source_events.csv --out data/redundancy_with_events_fixed
+```
+
+Choose a new output directory if it already exists. Review `mentions.csv` using
+`context_marked`, which shows complete matching lines plus neighboring lines and
+marks the span with `[[...]]`. `start`/`end` still reference the unchanged original
+note; `context_start`/`context_end` locate the unmarked context. This is a 75-note
+candidate audit, not full-cohort annotations or filtered notes.
