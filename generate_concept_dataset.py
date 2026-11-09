@@ -43,8 +43,8 @@ def add_result(audit, result):
         audit["masks"].append((int(result["mask_start"]), int(result["mask_end"]), result["mask_span"]))
 
 
-def filter_note(text, masks):
-    """Validate against the original, merge overlaps, then replace each union with a space."""
+def merge_intervals(text, masks):
+    """Validate and merge selected spans and separators between removed mentions."""
     intervals = []
     for start, end, expected in sorted(masks):
         if not (0 <= start < end <= len(text)) or text[start:end] != expected:
@@ -55,6 +55,12 @@ def filter_note(text, masks):
             intervals[-1] = (intervals[-1][0], max(end, intervals[-1][1]))
         else:
             intervals.append((start, end))
+    return intervals
+
+
+def filter_note(text, masks):
+    """Replace merged selections with spaces without changing surrounding text."""
+    intervals = merge_intervals(text, masks)
     pieces, cursor = [], 0
     for start, end in intervals:
         pieces.extend((text[cursor:start], " "))

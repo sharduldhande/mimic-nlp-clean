@@ -83,6 +83,10 @@ Model tokenization belongs to the training pipeline.
 (including mask counts and before/after token and character lengths), and `summary.json`
 with policy, source checksum and run counts. Original files remain unchanged.
 
+For 10 reproducible random training-note comparisons, run `python review_masked_notes.py`.
+Open `data/concept_masked/review_examples/before_after.html` in a browser (or the
+Markdown copy in your editor). Removed spans are highlighted and listed separately.
+
 Local folders are kept to `cleaned/`, `concept_masked/`, `audit_samples/` (small
 concept/verified examples and sample events), and `linkage_audit/` (source-check
 evidence). Share the filtered CSV through the team's authorized Google Drive
