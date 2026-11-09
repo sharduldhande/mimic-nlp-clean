@@ -12,7 +12,7 @@ from pathlib import Path
 
 import audit_redundancy as strict
 
-POLICY_VERSION = "concept-v1"
+POLICY_VERSION = "concept-v2"
 EXTRA_FIELDS = ["policy_version", "feature_category", "concept_overlap", "assertion_status",
                 "structured_feature", "mask_decision", "decision_reason", "mask_start",
                 "mask_end", "mask_span", "mask_preview"]
@@ -83,7 +83,7 @@ def value_span(mention):
     return None
 
 
-def propose(row, mention):
+def propose(row, mention, mask_scope="mention"):
     note, concept = row["discharge_note"], mention["concept"]
     candidates = json.loads(mention["structured_candidates"])
     result = dict(mention, policy_version=POLICY_VERSION, concept_overlap="unknown",
@@ -133,10 +133,26 @@ def propose(row, mention):
     if offsets is None:
         result["decision_reason"] = "Unable to isolate an unambiguous masking span."
         return result
+    if mask_scope == "mention" and concept in strict.ALIASES:
+        match = strict.MEASURE.fullmatch(mention["span"])
+        if match:
+            # Keep an inline timestamp preceding the clinical mention.
+            offsets = (match.start("name"), match.end())
+        else:
+            bp = strict.BP.fullmatch(mention["span"])
+            indexed = strict.measurements(row.get("measurements"))
+            both_available = all(any(c.get("missing") in (None, False, 0)
+                and strict.decimal(c.get("value")) is not None for c in indexed.get(name, []))
+                for name in ("systolic_bp", "diastolic_bp"))
+            if bp and both_available:
+                offsets = (re.search(r"\b(?:BP|blood pressure)\b", mention["span"], re.I).start(), bp.end())
+            # With only one BP component available, retain the other component.
     start, end = mention["start"] + offsets[0], mention["start"] + offsets[1]
     result.update(mask_decision="mask", mask_start=start, mask_end=end, mask_span=note[start:end],
                   decision_reason=("Literal diagnosis overlap; no exclusion cue detected." if concept == "diagnosis"
                     else "Matching patient sex header." if concept == "gender" else
+                    "Available structured concept; mask mention without requiring event equality."
+                    if mask_scope == "mention" else
                     "Available structured concept; mask number without requiring event equality."))
     result["mask_preview"] = (note[mention["context_start"]:start] + "[MASK]"
                               + note[end:mention["context_end"]])
@@ -264,7 +280,7 @@ def write_audit(rows, output, proposal=propose, policy_version=POLICY_VERSION, e
 
 
 def run_cli(proposal=propose, policy_version=POLICY_VERSION,
-            default_out="data/redundancy_concept_v1", description=__doc__, limitations=None):
+            default_out="data/redundancy_concept_v2", description=__doc__, limitations=None):
     parser = argparse.ArgumentParser(description=description)
     inputs = parser.add_mutually_exclusive_group()
     inputs.add_argument("--sample", type=Path, help="JSONL audit sample (default: committed 75 notes)")

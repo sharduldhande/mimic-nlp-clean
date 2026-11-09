@@ -42,6 +42,7 @@ def summarize(paths, output):
     present = defaultdict(Counter)
     mortality = defaultdict(Counter)
     lengths = defaultdict(list)
+    characters = defaultdict(list)
     features = set()
     columns = None
     required = {"split", "mortality_30d", "discharge_note", "diagnoses", "measurements"}
@@ -94,6 +95,7 @@ def summarize(paths, output):
             mortality[group][label_kind] += 1
             if note_length is not None:
                 lengths[group].append(note_length)
+                characters[group].append(len(text))
 
     if not totals:
         raise ValueError("Dataset is empty")
@@ -114,9 +116,13 @@ def summarize(paths, output):
             missing=labels["missing"], invalid=labels["invalid"], valid_labels=valid,
             mortality_percent=100 * labels["positive"] / valid if valid else None))
         values = pd.Series(lengths[group], dtype="float64")
+        chars = pd.Series(characters[group], dtype="float64")
         length_rows.append(dict(base, notes_counted=len(values), missing_notes=total - len(values),
             min=values.min(), mean=values.mean(), median=values.median(),
-            p95=values.quantile(.95), max=values.max(), token_method="whitespace"))
+            p95=values.quantile(.95), max=values.max(), token_method="whitespace",
+            characters_min=chars.min(), characters_mean=chars.mean(), characters_median=chars.median(),
+            characters_p95=chars.quantile(.95), characters_max=chars.max(),
+            character_method="Unicode code points, including whitespace"))
 
     for name, data in (("feature_missingness", missing_rows), ("mortality_prevalence", mortality_rows),
                        ("note_lengths", length_rows)):

@@ -7,7 +7,7 @@ POLICY_VERSION = "verified-v1"
 
 def propose(row, mention):
     # Share exact span extraction and context exclusions with the concept policy.
-    result = concept_proposal(row, mention)
+    result = concept_proposal(row, mention, mask_scope="value")
     result["policy_version"] = POLICY_VERSION
     concept = mention["concept"]
     eligible = False

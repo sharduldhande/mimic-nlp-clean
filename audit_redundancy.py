@@ -28,7 +28,8 @@ UNIT = r"mg/dL|g/dL|g/L|(?:µ|μ|u)mol/L|mmol/L|mEq/L|mm\s?Hg|bpm|beats/min|brea
 TIME = r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?"
 MEASURE = re.compile(
     rf"(?:(?P<time>{TIME})[ \t]+)?\b(?P<name>{'|'.join(ALIASES.values())})"
-    rf"\b(?:-(?=[\d.])|[ \t]*(?:[:=]|was)?[ \t]*)(?P<value>{NUMBER})(?![\w./:-])"
+    rf"\b(?:-(?=[\d.])|[ \t]*(?:[:=]|was)?[ \t]*)(?P<value>{NUMBER})"
+    rf"(?:(?![\w./:-])|(?=/[ \t]*(?:{'|'.join(ALIASES.values())})\b))"
     rf"(?:[ \t]*(?P<unit>{UNIT})(?![\w/]))?",
     re.I,
 )

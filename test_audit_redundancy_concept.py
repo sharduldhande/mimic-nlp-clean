@@ -40,9 +40,9 @@ class ConceptPolicyTests(unittest.TestCase):
         mention = next(strict.audit_row(row))
         result = propose(row, mention)
         self.assertEqual(result["mask_decision"], "mask")
-        self.assertEqual(result["mask_span"], "1.2")
+        self.assertEqual(result["mask_span"], "Creatinine 1.2 mg/dL")
         self.assertEqual(result["suggested_label"], "uncertain")
-        self.assertIn("Creatinine [MASK] mg/dL", result["mask_preview"])
+        self.assertEqual(result["mask_preview"], "[MASK].")
         row["measurements"][0]["is_missing"] = 1
         result = propose(row, next(strict.audit_row(row)))
         self.assertEqual(result["concept_overlap"], "unavailable")
@@ -53,10 +53,24 @@ class ConceptPolicyTests(unittest.TestCase):
             dict(feature="systolic_bp", last_value=130, is_missing=0),
             dict(feature="diastolic_bp", last_value=90, is_missing=0)])
         results = [propose(row, mention) for mention in strict.audit_row(row)]
-        self.assertEqual([r["mask_span"] for r in results], ["120", "80"])
+        self.assertEqual([r["mask_span"] for r in results], ["BP 120/80 mmHg", "BP 120/80 mmHg"])
         self.assertTrue(all(r["mask_decision"] == "mask" for r in results))
         for r in results:
             self.assertEqual(row["discharge_note"][r["mask_start"]:r["mask_end"]], r["mask_span"])
+
+    def test_partial_bp_does_not_remove_missing_counterpart(self):
+        row = dict(discharge_note="BP 120/80 mmHg", diagnoses=[], measurements=[
+            dict(feature="systolic_bp", last_value=130, is_missing=0)])
+        results = [propose(row, m) for m in strict.audit_row(row)]
+        self.assertEqual(results[0]["mask_span"], "120")
+        self.assertEqual(results[1]["mask_decision"], "keep")
+
+    def test_inline_timestamp_is_retained(self):
+        row = dict(discharge_note="2020-01-01 12:00 Creatinine 1.2 mg/dL", diagnoses=[], measurements=[
+            dict(feature="creatinine", last_value=2, is_missing=0)])
+        result = propose(row, next(strict.audit_row(row)))
+        self.assertEqual(result["mask_span"], "Creatinine 1.2 mg/dL")
+        self.assertTrue(result["mask_preview"].startswith("2020-01-01 12:00 "))
 
     def test_gender_masks_value_only_and_disagreement_needs_review(self):
         row = dict(discharge_note="Sex: F\n", gender="F", diagnoses=[], measurements=[])
