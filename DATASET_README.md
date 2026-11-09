@@ -3,6 +3,9 @@
 ## What to use
 
 Get data from Tony / Olivia; exports are excluded from GitHub.
+Or [rebuild from raw PhysioNet tables](DATASET_EXTRACTION_README.md) in your own project.
+**Transition:** the one-shot SQL now uses +1 day. The local exports below still use
++3 days until the new BigQuery cohort is exported and local processing is rerun.
 
 | File | Purpose |
 |---|---|
