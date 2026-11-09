@@ -1,8 +1,11 @@
-"""Add concept-based masking proposals to an existing note audit sample."""
+"""Export concept-based masking proposals for a sample or full Parquet dataset."""
 import argparse
-from collections import Counter
+from collections import Counter, defaultdict
+from concurrent.futures import ProcessPoolExecutor
 import csv
+import glob
 import hashlib
+from itertools import islice
 import json
 import re
 from pathlib import Path
@@ -140,43 +143,176 @@ def propose(row, mention):
     return result
 
 
+def parquet_rows(paths, split="all"):
+    """Process every admission, including notes with no extracted mentions."""
+    import pyarrow.parquet as pq
+    required = {"subject_id", "hadm_id", "note_id", "split", "discharge_note", "measurements", "diagnoses"}
+    for path in paths:
+        source = pq.ParquetFile(path)
+        if missing := required.difference(source.schema_arrow.names):
+            raise ValueError(f"{path}: missing columns {sorted(missing)}")
+        columns = [c for c in strict.COLUMNS if c in source.schema_arrow.names]
+        for batch in source.iter_batches(batch_size=128, columns=columns):
+            for row in batch.to_pylist():
+                if split == "all" or str(row["split"]).casefold() == split.casefold():
+                    yield row
+
+
+def process_note(job):
+    row, events, proposal = job
+    return row, bool(events), [proposal(row, m) for m in strict.audit_row(row, events)]
+
+
+def annotated_rows(rows, events, proposal, workers):
+    def jobs(batch):
+        return ((r, events.get((str(r["subject_id"]), str(r["hadm_id"])), ()), proposal) for r in batch)
+    if workers == 1:
+        yield from map(process_note, jobs(rows))
+        return
+    # Bound the in-flight notes; preserve input order regardless of worker completion.
+    rows = iter(rows)
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        while batch := list(islice(rows, workers * 8)):
+            yield from executor.map(process_note, jobs(batch), chunksize=1)
+
+
+def write_audit(rows, output, proposal=propose, policy_version=POLICY_VERSION, events=None,
+                require_event_coverage=False, workers=1):
+    """Write incrementally; publish completed filenames only after success."""
+    output.mkdir(parents=True, exist_ok=False)
+    events = events or {}
+    decisions, labels, concepts = Counter(), Counter(), defaultdict(Counter)
+    splits, category_counts = defaultdict(Counter), Counter()
+    admissions, note_ids = set(), set()
+    notes = notes_with_mentions = notes_with_masks = notes_with_events = total_mentions = 0
+    fields = strict.IDS + ["mentions", "mask_proposals", "unique_mask_spans", "has_raw_events"]
+    with (output / "mentions.csv.partial").open("w", newline="", encoding="utf-8") as handle, (
+        output / "note_summary.csv.partial"
+    ).open("w", newline="", encoding="utf-8") as note_handle:
+        writer = csv.DictWriter(handle, fieldnames=EXTRA_FIELDS + strict.FIELDS)
+        note_writer = csv.DictWriter(note_handle, fieldnames=fields)
+        writer.writeheader()
+        note_writer.writeheader()
+        for row, has_events, results in annotated_rows(rows, events, proposal, workers):
+            key = (str(row["subject_id"]), str(row["hadm_id"]))
+            note_id = str(row["note_id"])
+            if any(row.get(k) is None or not str(row[k]).strip() for k in ("subject_id", "hadm_id", "note_id", "split")):
+                raise ValueError("Missing admission/note identifiers or split")
+            if key in admissions or note_id in note_ids:
+                raise ValueError(f"Duplicate admission or note: {key}, {note_id}")
+            text = row.get("discharge_note")
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError(f"Missing note text: {note_id}")
+            admissions.add(key)
+            note_ids.add(note_id)
+            if require_event_coverage and not has_events and any(
+                c["missing"] in (None, False, 0) and strict.decimal(c["value"]) is not None
+                for candidates in strict.measurements(row.get("measurements")).values() for c in candidates
+            ):
+                raise ValueError("Events do not cover an admission with available measurements. "
+                                 "Export full event coverage or explicitly use --allow-partial-events. "
+                                 "Incomplete outputs retain .partial filenames.")
+            count = mask_count = 0
+            mask_spans = set()
+            split = str(row["split"])
+            for result in results:
+                if result["mask_decision"] == "mask":
+                    start, end = result["mask_start"], result["mask_end"]
+                    if not (0 <= start < end <= len(text)) or text[start:end] != result["mask_span"]:
+                        raise ValueError(f"Invalid mask offsets: {note_id}")
+                    mask_count += 1
+                    mask_spans.add((start, end))
+                writer.writerow(result)
+                count += 1
+                decision = result["mask_decision"]
+                decisions[decision] += 1
+                labels[result["suggested_label"]] += 1
+                concepts[result["concept"]][decision] += 1
+                splits[split][f"mentions_{decision}"] += 1
+                category_counts[(split, result["feature_category"], result["concept"], decision)] += 1
+            note_writer.writerow(dict({k: row.get(k) for k in strict.IDS}, mentions=count,
+                mask_proposals=mask_count, unique_mask_spans=len(mask_spans), has_raw_events=has_events))
+            notes += 1
+            total_mentions += count
+            notes_with_mentions += bool(count)
+            notes_with_masks += bool(mask_count)
+            notes_with_events += has_events
+            splits[split]["notes"] += 1
+            splits[split]["notes_with_mentions"] += bool(count)
+            splits[split]["notes_with_mask_proposals"] += bool(mask_count)
+            splits[split]["notes_with_events"] += has_events
+            if notes % 1000 == 0:
+                print(f"Processed {notes:,} notes; {total_mentions:,} mentions", flush=True)
+    if not notes:
+        raise ValueError("No admissions matched the requested inputs/split")
+    with (output / "category_summary.csv.partial").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["scope", "split", "feature_category", "concept", "mask_decision", "mentions"])
+        overall = Counter()
+        for (split, category, concept, decision), count in sorted(category_counts.items()):
+            writer.writerow(["split", split, category, concept, decision, count])
+            overall[(category, concept, decision)] += count
+        for (category, concept, decision), count in sorted(overall.items()):
+            writer.writerow(["overall", "", category, concept, decision, count])
+    for name in ("mentions.csv", "note_summary.csv", "category_summary.csv"):
+        (output / (name + ".partial")).rename(output / name)
+    return dict(policy_version=policy_version, notes=notes, mentions=total_mentions,
+        notes_with_mentions=notes_with_mentions, notes_with_mask_proposals=notes_with_masks,
+        notes_with_events=notes_with_events, decisions=dict(decisions), strict_labels=dict(labels),
+        by_concept={c: dict(v) for c, v in sorted(concepts.items())},
+        by_split={s: dict(v) for s, v in sorted(splits.items())})
+
+
 def run_cli(proposal=propose, policy_version=POLICY_VERSION,
             default_out="data/redundancy_concept_v1", description=__doc__, limitations=None):
-    """Use the same input and output format for both masking policies."""
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--sample", type=Path, default=Path("redundancy_audit_v3/sample.jsonl"))
+    inputs = parser.add_mutually_exclusive_group()
+    inputs.add_argument("--sample", type=Path, help="JSONL audit sample (default: committed 75 notes)")
+    inputs.add_argument("--parquet", nargs="+", help="Full Parquet parts; quoted wildcards supported")
+    parser.add_argument("--split", default="all", choices=["all", "train", "validation", "test"])
     parser.add_argument("--events", type=Path, help="Optional raw-event evidence for strict labels")
+    parser.add_argument("--allow-partial-events", action="store_true",
+                        help="Explicitly allow incomplete verified-event coverage in full mode")
+    parser.add_argument("--workers", type=int, choices=range(1, 17), default=1, metavar="1-16",
+                        help="Parallel note workers; results retain input order")
     parser.add_argument("--out", type=Path, default=Path(default_out))
     args = parser.parse_args()
     if args.out.exists():
         parser.error("Output folder exists; choose a new --out folder")
-    sample = [json.loads(line) for line in args.sample.read_text(encoding="utf-8").splitlines() if line.strip()]
-    if not sample:
-        parser.error("Sample is empty")
-    events = strict.load_events(args.events, sample) if args.events else {}
-    results = [proposal(row, mention) for row in sample for mention in strict.audit_row(
-        row, events.get((str(row["subject_id"]), str(row["hadm_id"])), ()))]
-    args.out.mkdir(parents=True, exist_ok=False)
-    with (args.out / "mentions.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=EXTRA_FIELDS + strict.FIELDS)
-        writer.writeheader()
-        writer.writerows(results)
-    summary = dict(policy_version=policy_version, notes=len(sample), mentions=len(results),
-        notes_with_mentions=len({r['note_id'] for r in results}),
-        notes_with_mask_proposals=len({r['note_id'] for r in results if r['mask_decision'] == 'mask'}),
-        decisions=dict(Counter(r['mask_decision'] for r in results)),
-        strict_labels=dict(Counter(r['suggested_label'] for r in results)),
-        by_concept={concept: dict(Counter(r['mask_decision'] for r in results if r['concept'] == concept))
-                    for concept in sorted({r['concept'] for r in results})},
-        sample=str(args.sample), sample_sha256=hashlib.sha256(args.sample.read_bytes()).hexdigest(),
-        events=str(args.events) if args.events else None,
+    verified_full = bool(args.parquet) and policy_version.startswith("verified")
+    if verified_full and not args.events and not args.allow_partial_events:
+        parser.error("Full verified audit requires --events covering the full cohort; "
+                     "use --allow-partial-events only for an explicitly incomplete audit")
+    if args.parquet:
+        paths = []
+        for pattern in args.parquet:
+            matches = sorted(glob.glob(pattern))
+            if not matches:
+                parser.error(f"No files match: {pattern}")
+            paths.extend(Path(p).resolve() for p in matches)
+        paths = list(dict.fromkeys(paths))
+        rows = lambda: parquet_rows(paths, args.split)
+        provenance = dict(mode="full", inputs=[str(p) for p in paths])
+    else:
+        path = args.sample or Path("redundancy_audit_v3/sample.jsonl")
+        sample = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        rows = lambda: (r for r in sample if args.split == "all" or str(r["split"]).casefold() == args.split)
+        provenance = dict(mode="sample", sample=str(path), sample_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+    events = strict.load_events(args.events, [
+        {k: r[k] for k in ("subject_id", "hadm_id")} for r in rows()
+    ]) if args.events else {}
+    summary = write_audit(rows(), args.out, proposal, policy_version, events,
+                          require_event_coverage=verified_full and not args.allow_partial_events,
+                          workers=args.workers)
+    summary.update(**provenance, split=args.split, events=str(args.events) if args.events else None,
+        allow_partial_events=args.allow_partial_events, workers=args.workers,
         limitations=limitations or ["Draft heuristic policy; human review not completed.",
             "Concept overlap does not establish same-event redundancy or absence of useful context.",
             "Literal diagnoses only; context flags are incomplete, not clinical NLP.",
             "Review and keep decisions both retain text. Overlapping mask spans must be merged downstream.",
             "This exports proposals and previews, not filtered full notes."])
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    print(f"Exported {len(results)} proposals from {len(sample)} notes to {args.out}")
+    print(f"Exported {summary['mentions']:,} proposals from {summary['notes']:,} notes to {args.out}")
     print(json.dumps(summary["decisions"]))
 
 
