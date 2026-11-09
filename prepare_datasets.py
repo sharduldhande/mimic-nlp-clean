@@ -12,6 +12,7 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import time
 import uuid
 
 import pandas as pd
@@ -210,6 +211,30 @@ def checked_path(path, root):
     return resolved
 
 
+def rename_output(source, target):
+    """Allow brief Windows viewer/indexer locks to clear."""
+    for attempt in range(5):
+        try:
+            Path(source).rename(target)
+            return
+        except PermissionError as error:
+            if attempt == 4:
+                raise PermissionError(
+                    f"Cannot rename {source}. Close dataset viewers and other processes "
+                    "using this output, then retry."
+                ) from error
+            time.sleep(0.25 * 2 ** attempt)
+
+
+def check_output_access(target, root):
+    """Catch existing output locks before the expensive rebuild."""
+    target = checked_path(target, root)
+    if target.exists():
+        probe = checked_path(target.with_name(f".access_check_{uuid.uuid4().hex}"), root)
+        rename_output(target, probe)
+        rename_output(probe, target)
+
+
 def publish(changes):
     """Keep prior generated outputs until every replacement succeeds."""
     completed = []
@@ -220,25 +245,25 @@ def publish(changes):
             target = checked_path(target, root)
             backup = checked_path(target.with_name(f".previous_{target.name}_{uuid.uuid4().hex}"), root)
             if target.exists():
-                target.rename(backup)
+                rename_output(target, backup)
             try:
-                Path(source).rename(target)
+                rename_output(source, target)
                 # Windows temporary folders restrict access; inherit the final folder's permissions.
                 if os.name == "nt":
                     subprocess.run(["icacls.exe", str(target), "/reset", "/T", "/Q"],
                                    check=True, capture_output=True, text=True)
             except Exception:
                 if target.exists():
-                    target.rename(source)
+                    rename_output(target, source)
                 if backup.exists():
-                    backup.rename(target)
+                    rename_output(backup, target)
                 raise
             completed.append((Path(source), target, backup, root))
     except Exception:
         for source, target, backup, root in reversed(completed):
-            checked_path(target, root).rename(source)
+            rename_output(checked_path(target, root), source)
             if backup.exists():
-                checked_path(backup, root).rename(target)
+                rename_output(checked_path(backup, root), target)
         raise
     for _, _, backup, root in completed:
         if backup.exists():
@@ -261,6 +286,10 @@ def prepare(root, source=None, workers=4):
             raise ValueError("Place exactly one dataset_splits.csv (or datasets_splits.csv) in data/cleaned")
         source = candidates[0]
     source = Path(source).resolve()
+    for name in ("concept_masked", "audit_samples"):
+        check_output_access(data / name, data)
+    for name in ("cleaned_csv", "cleaned_parquet", "concept_masked_csv", "concept_masked_parquet"):
+        check_output_access(validation / name, validation)
     source_hash = digest(source)
     print("1/6 Checking input CSV...", flush=True)
     input_report = validate_source(source)

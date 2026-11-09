@@ -5,13 +5,26 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import pyarrow.parquet as pq
 
-from prepare_datasets import NAMES, prepare, publish, validate_source
+from prepare_datasets import NAMES, prepare, publish, rename_output, validate_source
 
 
 class OneCommandTests(unittest.TestCase):
+    def test_transient_output_lock_is_retried(self):
+        with patch.object(Path, "rename", side_effect=[PermissionError("locked"), None]) as rename:
+            with patch("prepare_datasets.time.sleep"):
+                rename_output(Path("output"), Path("backup"))
+        self.assertEqual(rename.call_count, 2)
+
+    def test_persistent_output_lock_has_actionable_error(self):
+        with patch.object(Path, "rename", side_effect=PermissionError("locked")):
+            with patch("prepare_datasets.time.sleep"):
+                with self.assertRaisesRegex(PermissionError, "Close dataset viewers"):
+                    rename_output(Path("output"), Path("backup"))
+
     def write_source(self, root):
         path = root / "data/cleaned/dataset_splits.csv"
         path.parent.mkdir(parents=True)
