@@ -34,3 +34,6 @@ dist/
 .DS_Store
 .vscode/
 .idea/
+# Audit samples contain raw MIMIC note text (PhysioNet DUA: never commit)
+redundancy_audit_v3/
+*.jsonl
