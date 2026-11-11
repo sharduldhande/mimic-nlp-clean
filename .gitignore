@@ -256,3 +256,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Audit samples contain raw MIMIC note text (PhysioNet DUA: never commit)
+redundancy_audit_v3/
+*.jsonl
