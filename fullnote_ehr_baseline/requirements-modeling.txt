@@ -1,0 +1,5 @@
+-r requirements-step1-2.txt
+safetensors>=0.4,<1
+torch>=2.1,<3
+transformers>=4.35,<6
+xgboost>=2.0,<4

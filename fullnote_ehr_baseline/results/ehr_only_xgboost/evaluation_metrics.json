@@ -1,0 +1,95 @@
+{
+  "threshold_selection": {
+    "method": "maximize F1 on validation; highest threshold wins exact ties",
+    "threshold": 0.727022647857666,
+    "validation_f1": 0.4305772230889236
+  },
+  "validation": {
+    "selected_threshold": {
+      "rows": 6908,
+      "positives": 328,
+      "prevalence": 0.04748118123914302,
+      "threshold": 0.727022647857666,
+      "auroc": 0.8741636703981023,
+      "auprc": 0.40399825837292713,
+      "brier_score": 0.11304486525357597,
+      "log_loss": 0.3697142306184365,
+      "accuracy": 0.9471627099015634,
+      "precision": 0.44089456869009586,
+      "recall_sensitivity": 0.42073170731707316,
+      "specificity": 0.973404255319149,
+      "f1": 0.43057722308892354,
+      "confusion_matrix": {
+        "tn": 6405,
+        "fp": 175,
+        "fn": 190,
+        "tp": 138
+      }
+    },
+    "threshold_0_5": {
+      "rows": 6908,
+      "positives": 328,
+      "prevalence": 0.04748118123914302,
+      "threshold": 0.5,
+      "auroc": 0.8741636703981023,
+      "auprc": 0.40399825837292713,
+      "brier_score": 0.11304486525357597,
+      "log_loss": 0.3697142306184365,
+      "accuracy": 0.8510422698320788,
+      "precision": 0.19965724078834618,
+      "recall_sensitivity": 0.7103658536585366,
+      "specificity": 0.8580547112462006,
+      "f1": 0.3117056856187291,
+      "confusion_matrix": {
+        "tn": 5646,
+        "fp": 934,
+        "fn": 95,
+        "tp": 233
+      }
+    }
+  },
+  "test": {
+    "selected_threshold": {
+      "rows": 6782,
+      "positives": 321,
+      "prevalence": 0.047331170746092596,
+      "threshold": 0.727022647857666,
+      "auroc": 0.8633439747037219,
+      "auprc": 0.3412178275838945,
+      "brier_score": 0.11592582610077716,
+      "log_loss": 0.37680767355902106,
+      "accuracy": 0.9404305514597464,
+      "precision": 0.3738601823708207,
+      "recall_sensitivity": 0.38317757009345793,
+      "specificity": 0.9681163906516019,
+      "f1": 0.37846153846153846,
+      "confusion_matrix": {
+        "tn": 6255,
+        "fp": 206,
+        "fn": 198,
+        "tp": 123
+      }
+    },
+    "threshold_0_5": {
+      "rows": 6782,
+      "positives": 321,
+      "prevalence": 0.047331170746092596,
+      "threshold": 0.5,
+      "auroc": 0.8633439747037219,
+      "auprc": 0.3412178275838945,
+      "brier_score": 0.11592582610077716,
+      "log_loss": 0.37680767355902106,
+      "accuracy": 0.8475375995281628,
+      "precision": 0.18810148731408574,
+      "recall_sensitivity": 0.6697819314641744,
+      "specificity": 0.8563689831295465,
+      "f1": 0.2937158469945355,
+      "confusion_matrix": {
+        "tn": 5533,
+        "fp": 928,
+        "fn": 106,
+        "tp": 215
+      }
+    }
+  }
+}

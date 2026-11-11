@@ -1,0 +1,130 @@
+{
+  "artifact_version": "note-risk-logistic-v1",
+  "method": "L2 logistic regression on frozen 768-dimensional note embeddings",
+  "training_score_protocol": "patient-grouped out-of-fold predictions",
+  "configuration": {
+    "c": 1.0,
+    "max_iter": 1000,
+    "tolerance": 0.0001,
+    "n_splits": 5,
+    "seed": 7650,
+    "class_weight": null
+  },
+  "folds": [
+    {
+      "fold": 0,
+      "fit_rows": 25433,
+      "holdout_rows": 6359,
+      "fit_patients": 20683,
+      "holdout_patients": 5169,
+      "patient_overlap": 0,
+      "fit_positives": 1279,
+      "holdout_positives": 320,
+      "iterations": 27,
+      "holdout_metrics": {
+        "auroc": 0.803281275873489,
+        "auprc": 0.18539067890385658,
+        "brier_score": 0.04540788577384802,
+        "log_loss": 0.17726268133121648,
+        "mean_score": 0.05011713792843664
+      }
+    },
+    {
+      "fold": 1,
+      "fit_rows": 25433,
+      "holdout_rows": 6359,
+      "fit_patients": 20684,
+      "holdout_patients": 5168,
+      "patient_overlap": 0,
+      "fit_positives": 1279,
+      "holdout_positives": 320,
+      "iterations": 27,
+      "holdout_metrics": {
+        "auroc": 0.8030173662858089,
+        "auprc": 0.17610008632835483,
+        "brier_score": 0.04542776427109165,
+        "log_loss": 0.17723392755174985,
+        "mean_score": 0.05091191439999654
+      }
+    },
+    {
+      "fold": 2,
+      "fit_rows": 25434,
+      "holdout_rows": 6358,
+      "fit_patients": 20682,
+      "holdout_patients": 5170,
+      "patient_overlap": 0,
+      "fit_positives": 1279,
+      "holdout_positives": 320,
+      "iterations": 19,
+      "holdout_metrics": {
+        "auroc": 0.7971161808545876,
+        "auprc": 0.1586638647599444,
+        "brier_score": 0.04558695823713797,
+        "log_loss": 0.17813147698472576,
+        "mean_score": 0.04963725864738999
+      }
+    },
+    {
+      "fold": 3,
+      "fit_rows": 25434,
+      "holdout_rows": 6358,
+      "fit_patients": 20684,
+      "holdout_patients": 5168,
+      "patient_overlap": 0,
+      "fit_positives": 1279,
+      "holdout_positives": 320,
+      "iterations": 19,
+      "holdout_metrics": {
+        "auroc": 0.7875879844319311,
+        "auprc": 0.15700925363181564,
+        "brier_score": 0.0456562917116991,
+        "log_loss": 0.17847333809092608,
+        "mean_score": 0.05021857272510743
+      }
+    },
+    {
+      "fold": 4,
+      "fit_rows": 25434,
+      "holdout_rows": 6358,
+      "fit_patients": 20675,
+      "holdout_patients": 5177,
+      "patient_overlap": 0,
+      "fit_positives": 1280,
+      "holdout_positives": 319,
+      "iterations": 19,
+      "holdout_metrics": {
+        "auroc": 0.7669983145084641,
+        "auprc": 0.14601830012967168,
+        "brier_score": 0.04568294806378513,
+        "log_loss": 0.18021943987758754,
+        "mean_score": 0.050243444892379495
+      }
+    }
+  ],
+  "overall_metrics": {
+    "train_oof": {
+      "auroc": 0.7913673234192526,
+      "auprc": 0.16108646796437057,
+      "brier_score": 0.04555236114745922,
+      "log_loss": 0.1782641088600742,
+      "mean_score": 0.050225683890557184
+    },
+    "validation": {
+      "auroc": 0.7981489547038327,
+      "auprc": 0.16422145836397867,
+      "brier_score": 0.04294178027623535,
+      "log_loss": 0.1695891066185378,
+      "mean_score": 0.050612845299072506
+    },
+    "test": {
+      "auroc": 0.7854666942464757,
+      "auprc": 0.1591317972635763,
+      "brier_score": 0.04293550088096778,
+      "log_loss": 0.17014745116892618,
+      "mean_score": 0.05026621167274454
+    }
+  },
+  "final_model_iterations": 24,
+  "embedding_features": 768
+}

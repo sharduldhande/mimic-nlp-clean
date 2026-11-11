@@ -1,0 +1,50 @@
+[
+  {
+    "candidate_index": 0,
+    "candidate": {
+      "max_depth": 3,
+      "min_child_weight": 1.0
+    },
+    "best_iteration_zero_based": 552,
+    "boosting_rounds_used": 553,
+    "xgboost_best_validation_auprc": 0.4160476266798511,
+    "validation_auprc": 0.417734307184304,
+    "validation_auroc": 0.8852870857735933
+  },
+  {
+    "candidate_index": 1,
+    "candidate": {
+      "max_depth": 5,
+      "min_child_weight": 1.0
+    },
+    "best_iteration_zero_based": 178,
+    "boosting_rounds_used": 179,
+    "xgboost_best_validation_auprc": 0.4118238142807546,
+    "validation_auprc": 0.41337074581618366,
+    "validation_auroc": 0.8831330157906443
+  },
+  {
+    "candidate_index": 2,
+    "candidate": {
+      "max_depth": 5,
+      "min_child_weight": 5.0
+    },
+    "best_iteration_zero_based": 87,
+    "boosting_rounds_used": 88,
+    "xgboost_best_validation_auprc": 0.4170942995840419,
+    "validation_auprc": 0.4180536284170287,
+    "validation_auroc": 0.8812662169174883
+  },
+  {
+    "candidate_index": 3,
+    "candidate": {
+      "max_depth": 7,
+      "min_child_weight": 5.0
+    },
+    "best_iteration_zero_based": 95,
+    "boosting_rounds_used": 96,
+    "xgboost_best_validation_auprc": 0.40686807290089566,
+    "validation_auprc": 0.4082077611752014,
+    "validation_auroc": 0.8794754058862777
+  }
+]
