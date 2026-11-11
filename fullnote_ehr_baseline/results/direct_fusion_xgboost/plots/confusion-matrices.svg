@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="590" viewBox="0 0 980 590" role="img" aria-labelledby="title desc">
+  <title id="title">Confusion matrices</title>
+  <desc id="desc">Validation and test confusion matrices at the selected threshold.</desc>
+  <rect width="100%" height="100%" fill="#FFFFFF"/>
+  <style>
+    text { font-family: Arial, Helvetica, sans-serif; fill: #222222; }
+    .title { font-size: 24px; font-weight: 600; }
+    .subtitle { font-size: 14px; fill: #666666; }
+    .axis { font-size: 13px; fill: #222222; }
+    .tick { font-size: 12px; fill: #666666; }
+    .value { font-size: 12px; font-weight: 600; }
+    .legend { font-size: 13px; }
+  </style>
+<text class="title" x="50" y="38">Confusion matrices</text>
+<text class="subtitle" x="50" y="64">Counts at the validation-selected threshold 0.2614; percentages are normalized within the actual class.</text>
+<text class="axis" x="305" y="110" text-anchor="middle">Validation</text>
+<text class="axis" x="305" y="128" text-anchor="middle">Predicted class</text>
+<text class="axis" transform="translate(83 300) rotate(-90)" text-anchor="middle">Actual class</text>
+<text class="tick" x="230.0" y="147" text-anchor="middle">Survived</text>
+<text class="tick" x="380.0" y="147" text-anchor="middle">Died</text>
+<text class="tick" x="141" y="229.0" text-anchor="end">Survived</text>
+<rect x="155" y="150" width="150" height="150" fill="#0072B2" fill-opacity="0.887" stroke="#FFFFFF" stroke-width="3"/>
+<text class="value" x="230.0" y="217.0" text-anchor="middle" style="fill:#FFFFFF;font-size:22px">6,468</text>
+<text class="tick" x="230.0" y="244.0" text-anchor="middle" style="fill:#FFFFFF">98.3% of actual class</text>
+<rect x="305" y="150" width="150" height="150" fill="#0072B2" fill-opacity="0.133" stroke="#FFFFFF" stroke-width="3"/>
+<text class="value" x="380.0" y="217.0" text-anchor="middle" style="fill:#222222;font-size:22px">112</text>
+<text class="tick" x="380.0" y="244.0" text-anchor="middle" style="fill:#222222">1.7% of actual class</text>
+<text class="tick" x="141" y="379.0" text-anchor="end">Died</text>
+<rect x="155" y="300" width="150" height="150" fill="#0072B2" fill-opacity="0.569" stroke="#FFFFFF" stroke-width="3"/>
+<text class="value" x="230.0" y="367.0" text-anchor="middle" style="fill:#222222;font-size:22px">189</text>
+<text class="tick" x="230.0" y="394.0" text-anchor="middle" style="fill:#222222">57.6% of actual class</text>
+<rect x="305" y="300" width="150" height="150" fill="#0072B2" fill-opacity="0.451" stroke="#FFFFFF" stroke-width="3"/>
+<text class="value" x="380.0" y="367.0" text-anchor="middle" style="fill:#222222;font-size:22px">139</text>
+<text class="tick" x="380.0" y="394.0" text-anchor="middle" style="fill:#222222">42.4% of actual class</text>
+<text class="axis" x="740" y="110" text-anchor="middle">Test</text>
+<text class="axis" x="740" y="128" text-anchor="middle">Predicted class</text>
+<text class="axis" transform="translate(518 300) rotate(-90)" text-anchor="middle">Actual class</text>
+<text class="tick" x="665.0" y="147" text-anchor="middle">Survived</text>
+<text class="tick" x="815.0" y="147" text-anchor="middle">Died</text>
+<text class="tick" x="576" y="229.0" text-anchor="end">Survived</text>
+<rect x="590" y="150" width="150" height="150" fill="#0072B2" fill-opacity="0.887" stroke="#FFFFFF" stroke-width="3"/>
+<text class="value" x="665.0" y="217.0" text-anchor="middle" style="fill:#FFFFFF;font-size:22px">6,354</text>
+<text class="tick" x="665.0" y="244.0" text-anchor="middle" style="fill:#FFFFFF">98.3% of actual class</text>
+<rect x="740" y="150" width="150" height="150" fill="#0072B2" fill-opacity="0.133" stroke="#FFFFFF" stroke-width="3"/>
+<text class="value" x="815.0" y="217.0" text-anchor="middle" style="fill:#222222;font-size:22px">107</text>
+<text class="tick" x="815.0" y="244.0" text-anchor="middle" style="fill:#222222">1.7% of actual class</text>
+<text class="tick" x="576" y="379.0" text-anchor="end">Died</text>
+<rect x="590" y="300" width="150" height="150" fill="#0072B2" fill-opacity="0.655" stroke="#FFFFFF" stroke-width="3"/>
+<text class="value" x="665.0" y="367.0" text-anchor="middle" style="fill:#FFFFFF;font-size:22px">220</text>
+<text class="tick" x="665.0" y="394.0" text-anchor="middle" style="fill:#FFFFFF">68.5% of actual class</text>
+<rect x="740" y="300" width="150" height="150" fill="#0072B2" fill-opacity="0.365" stroke="#FFFFFF" stroke-width="3"/>
+<text class="value" x="815.0" y="367.0" text-anchor="middle" style="fill:#222222;font-size:22px">101</text>
+<text class="tick" x="815.0" y="394.0" text-anchor="middle" style="fill:#222222">31.5% of actual class</text>
+</svg>

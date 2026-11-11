@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" role="img" aria-labelledby="title desc">
+  <title id="title">Probability loss metrics</title>
+  <desc id="desc">Validation and test Brier score and log loss.</desc>
+  <rect width="100%" height="100%" fill="#FFFFFF"/>
+  <style>
+    text { font-family: Arial, Helvetica, sans-serif; fill: #222222; }
+    .title { font-size: 24px; font-weight: 600; }
+    .subtitle { font-size: 14px; fill: #666666; }
+    .axis { font-size: 13px; fill: #222222; }
+    .tick { font-size: 12px; fill: #666666; }
+    .value { font-size: 12px; font-weight: 600; }
+    .legend { font-size: 13px; }
+  </style>
+<text class="title" x="50" y="38">Probability error metrics</text>
+<text class="subtitle" x="50" y="64">Lower is better; both metrics use predicted probabilities, not the classification threshold.</text>
+<line x1="90" y1="470.00" x2="720" y2="470.00" stroke="#D9D9D9"/>
+<text class="tick" x="76" y="474.00" text-anchor="end">0.00</text>
+<line x1="90" y1="378.75" x2="720" y2="378.75" stroke="#D9D9D9"/>
+<text class="tick" x="76" y="382.75" text-anchor="end">0.05</text>
+<line x1="90" y1="287.50" x2="720" y2="287.50" stroke="#D9D9D9"/>
+<text class="tick" x="76" y="291.50" text-anchor="end">0.10</text>
+<line x1="90" y1="196.25" x2="720" y2="196.25" stroke="#D9D9D9"/>
+<text class="tick" x="76" y="200.25" text-anchor="end">0.15</text>
+<line x1="90" y1="105.00" x2="720" y2="105.00" stroke="#D9D9D9"/>
+<text class="tick" x="76" y="109.00" text-anchor="end">0.20</text>
+<rect x="177.50" y="405.56" width="70" height="64.44" fill="#0072B2"/>
+<text class="value" x="212.50" y="397.56" text-anchor="middle">0.035</text>
+<rect x="247.50" y="400.43" width="70" height="69.57" fill="#D55E00"/>
+<text class="value" x="282.50" y="392.43" text-anchor="middle">0.038</text>
+<text class="axis" x="247.50" y="502" text-anchor="middle">Brier score</text>
+<rect x="492.50" y="171.90" width="70" height="298.10" fill="#0072B2"/>
+<text class="value" x="527.50" y="163.90" text-anchor="middle">0.163</text>
+<rect x="562.50" y="161.69" width="70" height="308.31" fill="#D55E00"/>
+<text class="value" x="597.50" y="153.69" text-anchor="middle">0.169</text>
+<text class="axis" x="562.50" y="502" text-anchor="middle">Log loss</text>
+<rect x="500" y="32" width="16" height="16" fill="#0072B2"/><text class="legend" x="524" y="45">Validation</text>
+<rect x="610" y="32" width="16" height="16" fill="#D55E00"/><text class="legend" x="634" y="45">Test</text>
+</svg>
