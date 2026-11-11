@@ -1,0 +1,22 @@
+{
+  "rows": 45482,
+  "patients": 36913,
+  "splits": {
+    "train": 31792,
+    "test": 6782,
+    "validation": 6908
+  },
+  "positive_labels": 2248,
+  "mortality_percent": 4.94261466074491,
+  "note_lag_limit_days": 1,
+  "uniqueness_and_split_checks": "PASS",
+  "timestamps_and_labels": "PASS",
+  "source_note_label_linkage": "Not independently verified by this local pipeline",
+  "source": "C:\\Fall-26\\CS-7650\\7650_project\\data\\cleaned\\dataset_splits.csv",
+  "source_sha256": "9da07efbfdb519ea262af742cf9ed432b77c5310c68627220e8b22d8f56a14d6",
+  "policy_version": "concept-v2",
+  "csv_parquet_agreement": "PASS",
+  "filtered_non_note_preservation": "PASS",
+  "verified_event_masking": "Deferred; no raw event export is required",
+  "completed_at_utc": "2026-11-09T06:10:45.397856+00:00"
+}

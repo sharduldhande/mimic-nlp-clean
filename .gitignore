@@ -1,3 +1,41 @@
+# MIMIC-IV datasets
+data/
+*.parquet
+*.csv
+*.csv.gz
+*.tsv
+*.feather
+*.arrow
+*.gstmp
+
+# Credentials
+.env
+.env.*
+!.env.example
+*service-account*.json
+*credentials*.json
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS / VS Code
+.DS_Store
+.vscode/
+.idea/
+
+# ---- Standard Python template (from mimic-nlp initial commit) ----
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
