@@ -1,0 +1,337 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage[table]{xcolor}
+\usepackage{tabularx}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+
+\definecolor{headerblue}{HTML}{1F4E78}
+\definecolor{lightblue}{HTML}{DCE6F1}
+\definecolor{lightgray}{HTML}{F2F2F2}
+
+\hypersetup{
+  pdftitle={Progress Report: FullNote and EHR XGBoost Baselines},
+  pdfauthor={CS 7650 Project Team}
+}
+
+\setlist[itemize]{leftmargin=1.4em, itemsep=0.25em, topsep=0.35em}
+\setlist[enumerate]{leftmargin=1.6em, itemsep=0.25em, topsep=0.35em}
+\renewcommand{\arraystretch}{1.15}
+
+\title{\textbf{Progress Report: FullNote and EHR XGBoost Baselines}\\
+\large 30-Day Post-Discharge Mortality Prediction}
+\author{CS 7650 Project Team}
+\date{November 10, 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This report summarizes the completed FullNote + electronic health record (EHR)
+baseline for predicting 30-day post-discharge mortality. We implemented a fresh,
+reproducible pipeline that validates the cohort, constructs structured EHR
+features, embeds complete discharge summaries with frozen BioClinicalBERT, and
+trains three XGBoost experiments. An EHR-only model provides the note ablation.
+The direct-fusion experiment concatenates the EHR features and 768-dimensional
+note embedding. The third experiment compresses the note
+embedding into a leakage-safe mortality risk score before fusion with the EHR
+features. On the held-out test set, adding the full note produced a modest
+incremental improvement: AUROC increased from
+0.8633 to 0.8890 and AUPRC from 0.3412 to 0.3771 relative to EHR only.
+Risk-score fusion increased recall from 0.3146 to 0.4860 and
+F1 from 0.3819 to 0.4010, but reduced discrimination and produced substantially
+worse probability calibration. The direct model is therefore the stronger
+general-purpose baseline, while the risk-score model illustrates a useful
+sensitivity-oriented operating point.
+\end{abstract}
+
+\section{Objective and Current Scope}
+
+The prediction target is a binary outcome for each eligible hospital admission:
+
+\begin{quote}
+\emph{Did the patient die within 30 days after hospital discharge?}
+\end{quote}
+
+The current work evaluates whether discharge notes add predictive value beyond
+structured EHR data. We use the currently accepted cohort without regenerating
+the data, and the previously identified hospice-related cohort issue is deferred.
+All three experiments share the same validated cohort, EHR transformation, and
+train/validation/test split. The two note experiments additionally share the
+same frozen note embeddings and identity-alignment checks.
+
+\section{Dataset}
+
+The cohort is derived from MIMIC-IV structured EHR data and MIMIC-IV-Note
+discharge summaries. The unit of prediction is an admission. Splits are separated
+at the patient level so that a patient cannot occur in more than one split.
+
+\begin{table}[ht]
+\centering
+\caption{Accepted cohort summary.}
+\label{tab:cohort}
+\begin{tabular}{lrrr}
+\toprule
+\rowcolor{lightblue}
+Split & Admissions & 30-day deaths & Prevalence \\
+\midrule
+Train      & 31,792 & 1,599 & 5.03\% \\
+Validation &  6,908 &   328 & 4.75\% \\
+Test       &  6,782 &   321 & 4.73\% \\
+\midrule
+Total      & 45,482 & 2,248 & 4.94\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The full cohort contains 36,913 unique patients. Each admission includes stable
+identifiers, the binary label, split assignment, admission-level demographics,
+hospitalization attributes, diagnoses, ten measurement concepts, and one full
+discharge summary. The pipeline validates the exact schema, unique admission and
+note identifiers, timestamps, nonempty notes, binary labels, diagnosis content,
+and patient-level split separation before feature construction.
+
+\section{Completed Pipeline}
+
+\subsection{Structured EHR features}
+
+All learned preprocessing is fitted only on the training split and then reused
+unchanged for validation and test. The resulting sparse EHR matrix has 4,041
+features:
+
+\begin{itemize}
+  \item 63 numeric and measurement features, including age, length of stay,
+        diagnosis count, measurement summaries, missingness indicators, and
+        observation timing where available;
+  \item 28 one-hot categorical features for gender, admission type, admission
+        location, and insurance; and
+  \item 3,950 sparse multi-hot diagnosis features from a training-only ICD
+        vocabulary with a minimum training frequency of 10.
+\end{itemize}
+
+Identifiers, labels, split names, raw note text, and raw absolute timestamps are
+not used as predictors.
+
+\subsection{FullNote embeddings}
+
+Each discharge summary is encoded with frozen BioClinicalBERT. Long notes are
+split into non-overlapping chunks of at most 510 content tokens plus special
+tokens. Padding and special tokens are excluded from pooling. Token hidden states
+are summed across all chunks, divided by the note's total content-token count,
+and L2-normalized to produce one 768-dimensional vector per admission.
+
+The cached embedding artifact contains 45,482 rows and 768 columns. Generating it
+required 350,762 chunks and 167,344,801 content tokens. A companion index stores
+the subject, admission, and note identifiers, split, and label. Fusion joins by
+note identifier and verifies every other identity field rather than assuming
+that independently generated artifacts have the same row order.
+
+\subsection{EHR ablation and two fusion experiments}
+
+\begin{enumerate}
+  \item \textbf{EHR only:} pass the 4,041 structured features directly to
+        XGBoost without loading any note-derived feature.
+  \item \textbf{Direct fusion:} concatenate 4,041 EHR features with the
+        768-dimensional note vector, producing 4,809 predictors for XGBoost.
+  \item \textbf{Risk-score fusion:} use logistic regression to map the note
+        vector to one mortality score, append this score to the EHR matrix, and
+        train XGBoost with 4,042 predictors.
+\end{enumerate}
+
+The risk-score experiment requires two distinct fitting roles. Five fold-specific
+logistic models generate out-of-fold scores for training admissions, preventing
+each training label from influencing its own note-derived feature. A final
+logistic model fitted on all training embeddings generates validation, test, and
+future inference scores. The five folds use stratified group splitting by patient:
+all 31,792 training admissions receive exactly one out-of-fold score, and every
+fold has zero patient overlap between its fitting and holdout partitions.
+
+\section{Model Selection and Evaluation}
+
+XGBoost hyperparameters and classification thresholds are selected using the
+validation split only. For each model, the threshold is the validation cutoff
+that maximizes F1. The test set remains untouched until final evaluation. This
+threshold search changes only the final binary decision; threshold-independent
+metrics such as AUROC and AUPRC are computed from the continuous model scores.
+
+The EHR-only model selected \texttt{max\_depth=5},
+\texttt{min\_child\_weight=1}, and 98 boosting rounds. Its
+validation-selected threshold was 0.727023. The direct model selected
+\texttt{max\_depth=7},
+\texttt{min\_child\_weight=5}, and 1,177 boosting rounds. Its validation-selected
+threshold was 0.261359. The risk-score model selected
+\texttt{max\_depth=5}, \texttt{min\_child\_weight=5}, and 88 rounds, with a
+threshold of 0.717312. In the latter model, the note-risk score ranked first among
+all 4,042 inputs by XGBoost gain.
+
+\section{Results}
+
+\subsection{Note-only risk model}
+
+Before EHR fusion, the logistic note-risk model showed consistent discrimination
+across splits (Table~\ref{tab:note-risk}). The training result is out-of-fold and
+therefore provides a leakage-safe estimate for the generated training feature.
+
+\begin{table}[ht]
+\centering
+\caption{Note-only logistic risk-score performance.}
+\label{tab:note-risk}
+\begin{tabular}{lrrrr}
+\toprule
+\rowcolor{lightblue}
+Split & AUROC & AUPRC & Brier score & Log loss \\
+\midrule
+Train (out-of-fold) & 0.7914 & 0.1611 & 0.0456 & 0.1783 \\
+Validation          & 0.7981 & 0.1642 & 0.0429 & 0.1696 \\
+Test                & 0.7855 & 0.1591 & 0.0429 & 0.1701 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Final test comparison}
+
+\begin{table}[ht]
+\centering
+\caption{Held-out test performance at validation-selected thresholds.}
+\label{tab:test-results}
+\begin{tabular}{lrrr}
+\toprule
+\rowcolor{lightblue}
+Metric & EHR only & Direct fusion & Risk-score fusion \\
+\midrule
+AUROC               & 0.8633 & \textbf{0.8890} & 0.8740 \\
+AUPRC               & 0.3412 & \textbf{0.3771} & 0.3531 \\
+Accuracy            & 0.9404 & \textbf{0.9518} & 0.9313 \\
+Precision           & 0.3739 & \textbf{0.4856} & 0.3414 \\
+Recall / sensitivity& 0.3832 & 0.3146 & \textbf{0.4860} \\
+Specificity         & 0.9681 & \textbf{0.9834} & 0.9534 \\
+F1                  & 0.3785 & 0.3819 & \textbf{0.4010} \\
+Brier score $\downarrow$ & 0.1159 & \textbf{0.0381} & 0.1170 \\
+Log loss $\downarrow$    & 0.3768 & \textbf{0.1689} & 0.3699 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The test prevalence is 4.73\%, so accuracy must be interpreted cautiously: a
+classifier predicting survival for every admission would achieve 95.27\%
+accuracy while detecting no deaths. AUPRC is more informative for this imbalanced
+task. The direct model's AUPRC of 0.3771 is approximately eight times the no-skill
+prevalence baseline. Relative to EHR only, the full note improves test AUROC by
+0.0256 and AUPRC by 0.0359, demonstrating additional threshold-independent
+predictive signal.
+
+At its selected threshold, EHR only identified 123 of 321 deaths, with 206 false
+positives and 198 false negatives. Direct fusion identified 101 deaths, with 107
+false positives and 220 false negatives. Risk-score fusion identified 156 deaths,
+with 301 false positives and 165 false negatives. Thus, risk-score fusion found 55
+additional deaths but generated 194 additional false alerts.
+
+For the direct model, using the conventional 0.5 threshold instead of 0.261359
+would increase precision from 0.4856 to 0.5873 and accuracy from 0.9518 to 0.9559,
+but recall would fall from 0.3146 to 0.2305 and F1 from 0.3819 to 0.3311. The lower
+validation-selected threshold is therefore appropriate when balanced precision
+and recall, rather than accuracy alone, is the stated objective.
+
+\section{Interpretation}
+
+The EHR-only ablation confirms that the discharge summary adds predictive signal.
+Direct fusion improves ranking, precision, specificity, accuracy, and probability
+error relative to EHR only. Its independently selected threshold has lower recall,
+which reflects an operating-point trade-off rather than worse ranking.
+
+Direct fusion is the stronger overall baseline. It preserves the full note
+representation and performs better on ranking quality (AUROC and AUPRC),
+precision, specificity, and probability accuracy (Brier score and log loss).
+Risk-score fusion compresses the note into a single supervised feature and loses
+some information, but it shifts the operating point toward sensitivity and
+achieves higher test recall and F1.
+
+\subsection{Why the note improvement is modest}
+
+A patient-level paired bootstrap with 1,000 resamples estimated the direct-fusion
+minus EHR-only test AUROC change as $+0.0256$ (95\% interval $+0.0094$ to
+$+0.0409$) and the AUPRC change as $+0.0359$ (95\% interval $-0.0005$ to
+$+0.0745$). The AUROC gain is therefore likely real, but the AUPRC gain is less
+precise and the selected-threshold F1 change is only $+0.0034$. The appropriate
+conclusion is a modest incremental discrimination benefit, not a large
+improvement in binary classification.
+
+The implementation audit found no row-alignment, label, feature-width, inference,
+or metric-reproduction error. All 45,482 note embeddings are finite,
+768-dimensional, and L2-normalized. Nevertheless, the representations are highly
+similar: across 20,000 random note pairs, median cosine similarity is 0.9868 and
+mean similarity is 0.9856. The current encoder averages every non-special token
+across a mean of 3,679 content tokens per discharge summary. Common clinical
+language and boilerplate can therefore dominate the vector while short,
+prognostically important sections are diluted. In addition, BioClinicalBERT is
+frozen rather than optimized for mortality, and XGBoost receives the dense
+embedding dimensions directly. These are limitations of the baseline design,
+not evidence of a coding failure. Section-aware pooling, a task-specific note
+head, or leakage-safe late fusion are natural next experiments.
+
+The risk-score model's high threshold and large Brier score and log loss indicate
+that its final XGBoost outputs should not be interpreted as calibrated absolute
+mortality probabilities. Its scores are still useful for ranking and binary
+classification at the empirically selected cutoff. If calibrated probabilities
+are required, calibration must be added and assessed on data not used to fit the
+base model.
+
+\section{Engineering and Reproducibility}
+
+The implementation was created as a separate package and does not import the
+earlier project code. It provides command-line entry points for data validation,
+EHR feature construction, note embedding, model training, saved-model inference,
+and result plotting. Generated artifacts record the data contract, feature names,
+model settings, thresholds, metrics, and identity indices. The embedding stage is
+checkpointed and resumable, and saved inference reproduces the training-time
+feature order and alignment checks. The current automated test suite contains 13
+passing tests covering the data contract, feature construction, embedding
+behavior, fusion alignment, EHR-only saved inference, and modeling utilities.
+
+\section{Limitations}
+
+\begin{itemize}
+  \item The current cohort is accepted as provided. The hospice-related cohort
+        concern is documented but intentionally not corrected in this iteration.
+  \item Thresholds maximize validation F1; this is an experimental criterion, not
+        a clinically validated operating policy.
+  \item The report presents point estimates. Patient-level confidence intervals
+        and formal statistical comparisons have not yet been computed.
+  \item The experiment uses a single internal test split and has not been
+        externally validated.
+  \item The risk-score fusion output is not calibrated as an absolute
+        probability, likely in part because the final classifier emphasizes the
+        minority class.
+\end{itemize}
+
+\section{Next Steps}
+
+\begin{enumerate}
+  \item Select an operating threshold based on the desired trade-off between
+        missed deaths and false alerts, and report performance at several fixed
+        sensitivity targets in addition to maximum F1.
+  \item Add patient-level bootstrap confidence intervals for AUROC, AUPRC, F1,
+        recall, precision, Brier score, and the difference between experiments.
+  \item Calibrate the risk-score fusion outputs using a held-out calibration
+        procedure and re-evaluate Brier score, log loss, and calibration curves.
+  \item Run targeted ablations, including note representation choices and EHR
+        feature groups, to identify which components drive performance.
+  \item Evaluate key demographic and admission subgroups for performance gaps.
+  \item Preserve the direct-fusion model as the principal baseline and present
+        risk-score fusion as the higher-recall alternative.
+\end{enumerate}
+
+\section*{Current Status}
+
+The shared preprocessing and embedding pipeline, EHR-only ablation, both note
+fusion experiments, saved inference paths, automated tests, metric summaries, and plots
+are complete. The principal remaining work is evaluation refinement and report
+integration rather than baseline implementation.
+
+\end{document}

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="720" viewBox="0 0 1320 720">
+<title>Test metric comparison</title>
+<rect width="1320" height="720" fill="#FFFFFF"/>
+<style>
+text{font-family:Arial,Helvetica,sans-serif;fill:#172033}
+.title{font-size:25px;font-weight:700}
+.subtitle{font-size:14px;fill:#5B6475}
+.axis{font-size:14px;font-weight:600}
+.tick{font-size:12px;fill:#5B6475}
+.value{font-size:11px;font-weight:700}
+.legend{font-size:13px}
+</style>
+<text class="title" x="50" y="38">Held-out test performance</text>
+<text class="subtitle" x="50" y="65">Each model uses its own validation-F1-selected threshold; AUROC and AUPRC are threshold-independent.</text>
+<line x1="90" y1="600.00" x2="1280" y2="600.00" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="604.00" text-anchor="end">0.0</text>
+<line x1="90" y1="505.00" x2="1280" y2="505.00" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="509.00" text-anchor="end">0.2</text>
+<line x1="90" y1="410.00" x2="1280" y2="410.00" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="414.00" text-anchor="end">0.4</text>
+<line x1="90" y1="315.00" x2="1280" y2="315.00" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="319.00" text-anchor="end">0.6</text>
+<line x1="90" y1="220.00" x2="1280" y2="220.00" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="224.00" text-anchor="end">0.8</text>
+<line x1="90" y1="125.00" x2="1280" y2="125.00" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="129.00" text-anchor="end">1.0</text>
+<rect x="121.00" y="189.91" width="36" height="410.09" fill="#6B7280"/>
+<text class="value" x="139.00" y="182.91" text-anchor="middle">0.863</text>
+<rect x="157.00" y="177.75" width="36" height="422.25" fill="#2563EB"/>
+<text class="value" x="175.00" y="170.75" text-anchor="middle">0.889</text>
+<rect x="193.00" y="184.83" width="36" height="415.17" fill="#EA580C"/>
+<text class="value" x="211.00" y="177.83" text-anchor="middle">0.874</text>
+<text class="axis" x="175.00" y="632" text-anchor="middle">AUROC</text>
+<rect x="291.00" y="437.92" width="36" height="162.08" fill="#6B7280"/>
+<text class="value" x="309.00" y="430.92" text-anchor="middle">0.341</text>
+<rect x="327.00" y="420.89" width="36" height="179.11" fill="#2563EB"/>
+<text class="value" x="345.00" y="413.89" text-anchor="middle">0.377</text>
+<rect x="363.00" y="432.26" width="36" height="167.74" fill="#EA580C"/>
+<text class="value" x="381.00" y="425.26" text-anchor="middle">0.353</text>
+<text class="axis" x="345.00" y="632" text-anchor="middle">AUPRC</text>
+<rect x="461.00" y="153.30" width="36" height="446.70" fill="#6B7280"/>
+<text class="value" x="479.00" y="146.30" text-anchor="middle">0.940</text>
+<rect x="497.00" y="147.90" width="36" height="452.10" fill="#2563EB"/>
+<text class="value" x="515.00" y="140.90" text-anchor="middle">0.952</text>
+<rect x="533.00" y="157.64" width="36" height="442.36" fill="#EA580C"/>
+<text class="value" x="551.00" y="150.64" text-anchor="middle">0.931</text>
+<text class="axis" x="515.00" y="632" text-anchor="middle">Accuracy</text>
+<rect x="631.00" y="422.42" width="36" height="177.58" fill="#6B7280"/>
+<text class="value" x="649.00" y="415.42" text-anchor="middle">0.374</text>
+<rect x="667.00" y="369.35" width="36" height="230.65" fill="#2563EB"/>
+<text class="value" x="685.00" y="362.35" text-anchor="middle">0.486</text>
+<rect x="703.00" y="437.86" width="36" height="162.14" fill="#EA580C"/>
+<text class="value" x="721.00" y="430.86" text-anchor="middle">0.341</text>
+<text class="axis" x="685.00" y="632" text-anchor="middle">Precision</text>
+<rect x="801.00" y="417.99" width="36" height="182.01" fill="#6B7280"/>
+<text class="value" x="819.00" y="410.99" text-anchor="middle">0.383</text>
+<rect x="837.00" y="450.55" width="36" height="149.45" fill="#2563EB"/>
+<text class="value" x="855.00" y="443.55" text-anchor="middle">0.315</text>
+<rect x="873.00" y="369.16" width="36" height="230.84" fill="#EA580C"/>
+<text class="value" x="891.00" y="362.16" text-anchor="middle">0.486</text>
+<text class="axis" x="855.00" y="632" text-anchor="middle">Recall</text>
+<rect x="971.00" y="140.14" width="36" height="459.86" fill="#6B7280"/>
+<text class="value" x="989.00" y="137.00" text-anchor="middle">0.968</text>
+<rect x="1007.00" y="132.87" width="36" height="467.13" fill="#2563EB"/>
+<text class="value" x="1025.00" y="137.00" text-anchor="middle">0.983</text>
+<rect x="1043.00" y="147.13" width="36" height="452.87" fill="#EA580C"/>
+<text class="value" x="1061.00" y="140.13" text-anchor="middle">0.953</text>
+<text class="axis" x="1025.00" y="632" text-anchor="middle">Specificity</text>
+<rect x="1141.00" y="420.23" width="36" height="179.77" fill="#6B7280"/>
+<text class="value" x="1159.00" y="413.23" text-anchor="middle">0.378</text>
+<rect x="1177.00" y="418.62" width="36" height="181.38" fill="#2563EB"/>
+<text class="value" x="1195.00" y="411.62" text-anchor="middle">0.382</text>
+<rect x="1213.00" y="409.51" width="36" height="190.49" fill="#EA580C"/>
+<text class="value" x="1231.00" y="402.51" text-anchor="middle">0.401</text>
+<text class="axis" x="1195.00" y="632" text-anchor="middle">F1</text>
+<rect x="730" y="34" width="16" height="16" fill="#6B7280"/>
+<text class="legend" x="754" y="47">EHR only</text>
+<rect x="910" y="34" width="16" height="16" fill="#2563EB"/>
+<text class="legend" x="934" y="47">EHR + FullNote</text>
+<rect x="1090" y="34" width="16" height="16" fill="#EA580C"/>
+<text class="legend" x="1114" y="47">EHR + note risk</text>
+</svg>

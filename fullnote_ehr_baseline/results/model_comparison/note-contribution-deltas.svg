@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="680" viewBox="0 0 1100 680">
+<title>FullNote contribution deltas</title>
+<rect width="1100" height="680" fill="#FFFFFF"/>
+<style>
+text{font-family:Arial,Helvetica,sans-serif;fill:#172033}
+.title{font-size:25px;font-weight:700}
+.subtitle{font-size:14px;fill:#5B6475}
+.axis{font-size:14px;font-weight:600}
+.tick{font-size:12px;fill:#5B6475}
+.value{font-size:11px;font-weight:700}
+.legend{font-size:13px}
+</style>
+<text class="title" x="50" y="38">Effect of adding the full note embedding</text>
+<text class="subtitle" x="50" y="65">Direct FullNote fusion minus EHR-only on the held-out test set. Positive bars favor FullNote.</text>
+<line x1="100" y1="345.00" x2="1050" y2="345.00" stroke="#172033" stroke-width="1.5"/>
+<line x1="100" y1="570.00" x2="1050" y2="570.00" stroke="#D7DDE8"/>
+<text class="tick" x="88" y="574.00" text-anchor="end">-0.128</text>
+<line x1="100" y1="457.50" x2="1050" y2="457.50" stroke="#D7DDE8"/>
+<text class="tick" x="88" y="461.50" text-anchor="end">-0.064</text>
+<text class="tick" x="88" y="349.00" text-anchor="end">+0.000</text>
+<line x1="100" y1="232.50" x2="1050" y2="232.50" stroke="#D7DDE8"/>
+<text class="tick" x="88" y="236.50" text-anchor="end">+0.064</text>
+<line x1="100" y1="120.00" x2="1050" y2="120.00" stroke="#D7DDE8"/>
+<text class="tick" x="88" y="124.00" text-anchor="end">+0.128</text>
+<rect x="130.54" y="300.15" width="74.64" height="44.85" fill="#2563EB"/>
+<text class="value" x="167.86" y="292.15" text-anchor="middle">+0.026</text>
+<text class="axis" x="167.86" y="602" text-anchor="middle">AUROC</text>
+<rect x="266.25" y="282.21" width="74.64" height="62.79" fill="#2563EB"/>
+<text class="value" x="303.57" y="274.21" text-anchor="middle">+0.036</text>
+<text class="axis" x="303.57" y="602" text-anchor="middle">AUPRC</text>
+<rect x="401.96" y="325.12" width="74.64" height="19.88" fill="#2563EB"/>
+<text class="value" x="439.29" y="317.12" text-anchor="middle">+0.011</text>
+<text class="axis" x="439.29" y="602" text-anchor="middle">Accuracy</text>
+<rect x="537.68" y="149.35" width="74.64" height="195.65" fill="#2563EB"/>
+<text class="value" x="575.00" y="141.35" text-anchor="middle">+0.112</text>
+<text class="axis" x="575.00" y="602" text-anchor="middle">Precision</text>
+<rect x="673.39" y="345.00" width="74.64" height="120.03" fill="#DC2626"/>
+<text class="value" x="710.71" y="483.03" text-anchor="middle">-0.069</text>
+<text class="axis" x="710.71" y="602" text-anchor="middle">Recall</text>
+<rect x="809.11" y="318.16" width="74.64" height="26.84" fill="#2563EB"/>
+<text class="value" x="846.43" y="310.16" text-anchor="middle">+0.015</text>
+<text class="axis" x="846.43" y="602" text-anchor="middle">Specificity</text>
+<rect x="944.82" y="339.06" width="74.64" height="5.94" fill="#2563EB"/>
+<text class="value" x="982.14" y="331.06" text-anchor="middle">+0.003</text>
+<text class="axis" x="982.14" y="602" text-anchor="middle">F1</text>
+</svg>

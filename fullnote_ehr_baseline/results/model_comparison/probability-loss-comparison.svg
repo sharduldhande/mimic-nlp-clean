@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="850" height="590" viewBox="0 0 850 590">
+<title>Probability loss comparison</title>
+<rect width="850" height="590" fill="#FFFFFF"/>
+<style>
+text{font-family:Arial,Helvetica,sans-serif;fill:#172033}
+.title{font-size:25px;font-weight:700}
+.subtitle{font-size:14px;fill:#5B6475}
+.axis{font-size:14px;font-weight:600}
+.tick{font-size:12px;fill:#5B6475}
+.value{font-size:11px;font-weight:700}
+.legend{font-size:13px}
+</style>
+<text class="title" x="50" y="38">Held-out probability error</text>
+<text class="subtitle" x="50" y="65">Lower is better. These values use continuous scores and do not depend on the classification threshold.</text>
+<line x1="90" y1="490.00" x2="810" y2="490.00" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="494.00" text-anchor="end">0.00</text>
+<line x1="90" y1="396.25" x2="810" y2="396.25" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="400.25" text-anchor="end">0.11</text>
+<line x1="90" y1="302.50" x2="810" y2="302.50" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="306.50" text-anchor="end">0.22</text>
+<line x1="90" y1="208.75" x2="810" y2="208.75" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="212.75" text-anchor="end">0.32</text>
+<line x1="90" y1="115.00" x2="810" y2="115.00" stroke="#D7DDE8"/>
+<text class="tick" x="78" y="119.00" text-anchor="end">0.43</text>
+<rect x="187.50" y="389.68" width="55" height="100.32" fill="#6B7280"/>
+<text class="value" x="215.00" y="382.68" text-anchor="middle">0.116</text>
+<rect x="242.50" y="457.01" width="55" height="32.99" fill="#2563EB"/>
+<text class="value" x="270.00" y="450.01" text-anchor="middle">0.038</text>
+<rect x="297.50" y="388.71" width="55" height="101.29" fill="#EA580C"/>
+<text class="value" x="325.00" y="381.71" text-anchor="middle">0.117</text>
+<text class="axis" x="270.00" y="522" text-anchor="middle">Brier score</text>
+<rect x="547.50" y="163.91" width="55" height="326.09" fill="#6B7280"/>
+<text class="value" x="575.00" y="156.91" text-anchor="middle">0.377</text>
+<rect x="602.50" y="343.80" width="55" height="146.20" fill="#2563EB"/>
+<text class="value" x="630.00" y="336.80" text-anchor="middle">0.169</text>
+<rect x="657.50" y="169.88" width="55" height="320.12" fill="#EA580C"/>
+<text class="value" x="685.00" y="162.88" text-anchor="middle">0.370</text>
+<text class="axis" x="630.00" y="522" text-anchor="middle">Log loss</text>
+<rect x="320" y="82" width="16" height="16" fill="#6B7280"/>
+<text class="legend" x="344" y="95">EHR only</text>
+<rect x="490" y="82" width="16" height="16" fill="#2563EB"/>
+<text class="legend" x="514" y="95">EHR + FullNote</text>
+<rect x="660" y="82" width="16" height="16" fill="#EA580C"/>
+<text class="legend" x="684" y="95">EHR + note risk</text>
+</svg>

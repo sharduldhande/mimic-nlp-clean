@@ -11,6 +11,7 @@ from fullnote_ehr.fusion import (
     build_direct_fusion_matrix,
     load_aligned_fusion_split,
     load_direct_feature_names,
+    load_ehr_split,
 )
 
 
@@ -65,6 +66,9 @@ def _write_fusion_artifacts(tmp_path, embedding_label_override=None):
 
 def test_alignment_reorders_embeddings_and_builds_direct_matrix(tmp_path):
     ehr, embeddings = _write_fusion_artifacts(tmp_path)
+    ehr_only = load_ehr_split(ehr, "train")
+    assert ehr_only.ehr_matrix.shape == (2, 2)
+    np.testing.assert_array_equal(ehr_only.labels, np.array([0, 1], dtype=np.int8))
     aligned = load_aligned_fusion_split(ehr, embeddings, "train")
     np.testing.assert_array_equal(
         aligned.note_embeddings,

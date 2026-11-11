@@ -1,15 +1,17 @@
 # FullNote + EHR mortality pipeline
 
-This is a fresh implementation for the two requested 30-day mortality experiments:
+This is a fresh implementation for three 30-day mortality experiments:
 
-1. **Direct fusion:** structured EHR features concatenated with one 768-dimensional
+1. **EHR only:** structured EHR features passed directly to XGBoost as a note
+   ablation baseline.
+2. **Direct fusion:** structured EHR features concatenated with one 768-dimensional
    full-note embedding, followed by XGBoost.
-2. **Risk-score fusion:** a classifier converts the same full-note embedding into a
+3. **Risk-score fusion:** a classifier converts the same full-note embedding into a
    single out-of-fold mortality risk score; that score is concatenated with the
    structured EHR features and passed to XGBoost.
 
 The current implementation contains the shared foundation, embedding stage, and
-both requested fusion experiments:
+all three experiments:
 
 - Step 1: dataset discovery, loading, and full contract validation.
 - Step 2: train-only fitting and reusable transformation of structured EHR data.
@@ -17,6 +19,7 @@ both requested fusion experiments:
 - Step 4: identity-checked alignment of EHR rows and FullNote embeddings.
 - Step 5: direct-concatenation XGBoost training, selection, and evaluation.
 - Step 6: leakage-safe note-risk scoring followed by EHR + score XGBoost.
+- Step 7: controlled EHR-only XGBoost ablation and three-model comparison.
 
 It intentionally does not import code from the existing `7650_project` folder.
 
@@ -33,6 +36,7 @@ fullnote_ehr_baseline/
     embeddings.py                      Chunking, pooling, resume, artifact loading
     fusion.py                          Identity alignment and direct concatenation
     direct_fusion.py                   XGBoost training, metrics, and prediction
+    ehr_only.py                        EHR-only XGBoost ablation and prediction
     risk_score_fusion.py               Grouped OOF scores and risk-fusion model
     cli/
       validate_dataset.py              Dataset-contract command
@@ -41,12 +45,20 @@ fullnote_ehr_baseline/
       embed_full_notes.py              Generate the shared FullNote embedding cache
       train_direct_fusion.py           Train/evaluate direct EHR + note fusion
       predict_direct_fusion.py         Re-run a saved model on a prepared split
+      train_ehr_only.py                Train/evaluate the EHR-only ablation
+      predict_ehr_only.py              Re-run the saved EHR-only model
       train_risk_score_fusion.py       Train/evaluate EHR + note-risk fusion
       predict_risk_score_fusion.py     Re-run the saved risk-score pipeline
+      plot_ablation_comparison.py      Compare all three held-out results
   tests/                               Synthetic contract and feature tests
+  report/progress_report.tex           Overleaf-ready project progress report
+  results/                              Git-safe aggregate metrics and SVG figures
 ```
 
-Generated files belong under `artifacts/`, which is ignored by Git.
+Bulky generated files belong under `artifacts/`, which is ignored by Git. The
+curated branch keeps only aggregate metrics, summaries, and SVG figures under
+`results/`; it excludes datasets, embeddings, row-level predictions, and model
+binaries.
 
 ## Accepted dataset
 
@@ -245,8 +257,8 @@ python -m fullnote_ehr.cli.transform_ehr `
 ```
 
 Unknown categories and diagnosis codes are ignored; the saved training feature
-order is preserved. Final mortality inference will additionally require the fitted
-direct- or risk-fusion model, which is not implemented yet.
+order is preserved. The fitted EHR-only, direct-fusion, or risk-fusion model can
+then consume the corresponding prepared features.
 
 ## Step 4: aligned fusion inputs
 
@@ -429,14 +441,110 @@ python -m fullnote_ehr.cli.predict_risk_score_fusion `
   --output-metrics artifacts\inference\risk_score_fusion_test_metrics.json
 ```
 
+## Step 7: EHR-only XGBoost ablation
+
+The EHR-only experiment isolates the contribution of discharge-note features.
+It uses the same 4,041 EHR columns, patient-separated splits, four XGBoost
+candidates, class weighting, early-stopping budget, validation AUPRC selection,
+and validation-F1 threshold rule as direct fusion. It does not load the embedding
+artifact.
+
+```powershell
+python -m fullnote_ehr.cli.train_ehr_only `
+  --ehr-dir artifacts\ehr `
+  --output-dir artifacts\models\ehr_only_xgboost `
+  --device cuda
+```
+
+The completed run selected `max_depth=5`, `min_child_weight=1`, and 98 trees.
+Its validation-selected threshold is 0.727023.
+
+| Metric | EHR-only test | Direct FullNote test | Direct minus EHR |
+|---|---:|---:|---:|
+| AUROC | 0.8633 | 0.8890 | +0.0256 |
+| AUPRC | 0.3412 | 0.3771 | +0.0359 |
+| Accuracy | 0.9404 | 0.9518 | +0.0114 |
+| Precision | 0.3739 | 0.4856 | +0.1117 |
+| Recall/sensitivity | 0.3832 | 0.3146 | -0.0685 |
+| Specificity | 0.9681 | 0.9834 | +0.0153 |
+| F1 | 0.3785 | 0.3819 | +0.0034 |
+| Brier score | 0.1159 | 0.0381 | -0.0778 |
+| Log loss | 0.3768 | 0.1689 | -0.2079 |
+
+Adding the complete note improves the threshold-independent metrics: test AUROC
+increases by 0.0256 and AUPRC by 0.0359. It also improves precision, specificity,
+and probability error. Direct fusion has lower recall at its independently
+selected threshold, so thresholded metrics should also be compared at a fixed
+recall or fixed false-positive rate before choosing an operating policy.
+
+### Why the improvement is modest
+
+The note ablation supports a modest incremental benefit rather than a large
+performance jump. A patient-level paired bootstrap with 1,000 resamples estimated
+the test AUROC change as `+0.0256` (95% interval `+0.0094` to `+0.0409`) and the
+test AUPRC change as `+0.0359` (95% interval `-0.0005` to `+0.0745`). Thus, the
+ranking improvement is clearest for AUROC, while the AUPRC improvement is less
+precise and the selected-threshold F1 change is only `+0.0034`.
+
+Artifact audits found no row-alignment or metric-reproduction error. All 45,482
+note vectors are finite, have the expected 768 dimensions, and align exactly with
+the EHR identities and labels. However, the full-note vectors are highly similar:
+the median cosine similarity between 20,000 random note pairs is `0.9868` (mean
+`0.9856`). The current embedding averages every non-special token across a mean of
+3,679 content tokens per note and then L2-normalizes the result. Common clinical
+language and discharge-summary boilerplate can therefore dominate the vector,
+while short high-risk sections are diluted. The encoder is also frozen and the
+dense representation is passed directly to a tree model. These are methodological
+limitations of the baseline, not evidence of a coding failure, and they motivate
+task-specific or section-aware note modeling in future experiments.
+
+### EHR-only artifacts and inference
+
+```text
+artifacts/models/ehr_only_xgboost/
+  ehr_only_xgboost_model.ubj
+  training_manifest.json
+  evaluation_metrics.json
+  candidate_trials.json
+  best_evaluation_history.json
+  feature_names.json
+  feature_importance.parquet
+  predictions_validation.parquet
+  predictions_test.parquet
+```
+
+```powershell
+python -m fullnote_ehr.cli.predict_ehr_only `
+  --ehr-dir artifacts\ehr `
+  --model-dir artifacts\models\ehr_only_xgboost `
+  --split test `
+  --output-predictions artifacts\inference\ehr_only_test.parquet `
+  --output-metrics artifacts\inference\ehr_only_test_metrics.json
+```
+
+Generate aggregate comparison plots for all three experiments:
+
+```powershell
+python -m fullnote_ehr.cli.plot_ablation_comparison `
+  --ehr-only-dir artifacts\models\ehr_only_xgboost `
+  --direct-dir artifacts\models\direct_fusion_xgboost `
+  --risk-score-dir artifacts\models\risk_score_fusion_xgboost `
+  --output-dir artifacts\models\model_comparison
+```
+
+This writes the grouped test metrics, direct-FullNote-minus-EHR deltas,
+probability-loss figures, and a machine-readable comparison JSON.
+
 ## Final inference design
 
 For one new eligible admission, final inference will require:
 
 1. Transform its structured data with `feature_builder.joblib`.
-2. Chunk and embed its full discharge note with the saved Step 3 recipe.
-3. For direct fusion, append all 768 embedding values and run the saved model.
-4. For risk fusion, run the saved note-risk classifier, append its probability,
+2. For EHR only, run the saved EHR-only model immediately.
+3. For note experiments, chunk and embed the full discharge note with the saved
+   Step 3 recipe.
+4. For direct fusion, append all 768 embedding values and run the saved model.
+5. For risk fusion, run the saved note-risk classifier, append its probability,
    and run the risk-fusion model.
 
 The preprocessing, embedding, and model manifests must agree. Inference should
@@ -448,8 +556,10 @@ fail rather than combine artifacts with different schemas or feature orders.
 python -m pytest
 ```
 
-Tests use synthetic records only. They verify contract acceptance/rejection,
+The suite currently contains 13 tests using synthetic records only. They verify
+contract acceptance/rejection,
 train-only vocabulary fitting, unseen-category handling, measurement flattening,
 stable feature order, builder serialization, long-note chunk masks, token-weighted
 pooling, normalization, cache publishing, cache/index loading, identity-safe
-fusion, and patient-grouped OOF risk scoring.
+fusion, EHR-only training and saved inference, and patient-grouped OOF risk
+scoring.

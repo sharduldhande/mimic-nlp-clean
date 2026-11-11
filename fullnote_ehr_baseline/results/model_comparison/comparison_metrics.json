@@ -1,0 +1,85 @@
+{
+  "split": "test",
+  "threshold_policy": "each model uses its validation-F1-selected threshold",
+  "models": {
+    "EHR only": {
+      "rows": 6782,
+      "positives": 321,
+      "prevalence": 0.047331170746092596,
+      "threshold": 0.727022647857666,
+      "auroc": 0.8633439747037219,
+      "auprc": 0.3412178275838945,
+      "brier_score": 0.11592582610077716,
+      "log_loss": 0.37680767355902106,
+      "accuracy": 0.9404305514597464,
+      "precision": 0.3738601823708207,
+      "recall_sensitivity": 0.38317757009345793,
+      "specificity": 0.9681163906516019,
+      "f1": 0.37846153846153846,
+      "confusion_matrix": {
+        "tn": 6255,
+        "fp": 206,
+        "fn": 198,
+        "tp": 123
+      }
+    },
+    "EHR + FullNote": {
+      "rows": 6782,
+      "positives": 321,
+      "prevalence": 0.047331170746092596,
+      "threshold": 0.2613590657711029,
+      "auroc": 0.8889541418171141,
+      "auprc": 0.3770703132582136,
+      "brier_score": 0.038121551098570156,
+      "log_loss": 0.16893744997296853,
+      "accuracy": 0.9517841344736067,
+      "precision": 0.4855769230769231,
+      "recall_sensitivity": 0.3146417445482866,
+      "specificity": 0.9834390961151525,
+      "f1": 0.3818525519848771,
+      "confusion_matrix": {
+        "tn": 6354,
+        "fp": 107,
+        "fn": 220,
+        "tp": 101
+      }
+    },
+    "EHR + note risk": {
+      "rows": 6782,
+      "positives": 321,
+      "prevalence": 0.047331170746092596,
+      "threshold": 0.7173123955726624,
+      "auroc": 0.874034525870777,
+      "auprc": 0.35312827624137305,
+      "brier_score": 0.1170443101991855,
+      "log_loss": 0.36990868793512693,
+      "accuracy": 0.9312887053966381,
+      "precision": 0.3413566739606127,
+      "recall_sensitivity": 0.48598130841121495,
+      "specificity": 0.9534127843986999,
+      "f1": 0.40102827763496146,
+      "confusion_matrix": {
+        "tn": 6160,
+        "fp": 301,
+        "fn": 165,
+        "tp": 156
+      }
+    }
+  },
+  "direct_fullnote_minus_ehr_only": {
+    "auroc": 0.025610167113392146,
+    "auprc": 0.03585248567431909,
+    "accuracy": 0.011353583013860247,
+    "precision": 0.11171674070610238,
+    "recall_sensitivity": -0.06853582554517135,
+    "specificity": 0.015322705463550523,
+    "f1": 0.0033910135233386485,
+    "brier_score": -0.077804275002207,
+    "log_loss": -0.20787022358605253
+  },
+  "files": [
+    "test-metric-comparison.svg",
+    "note-contribution-deltas.svg",
+    "probability-loss-comparison.svg"
+  ]
+}

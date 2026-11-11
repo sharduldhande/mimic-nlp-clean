@@ -16,6 +16,24 @@ from .schema import IDENTITY_COLUMNS, SPLITS
 
 
 @dataclass
+class EHRModelSplit:
+    """One validated structured-EHR split in its persisted feature order."""
+
+    split: str
+    ehr_matrix: sparse.csr_matrix
+    labels: np.ndarray
+    index: pd.DataFrame
+
+    @property
+    def rows(self) -> int:
+        return int(self.ehr_matrix.shape[0])
+
+    @property
+    def ehr_features(self) -> int:
+        return int(self.ehr_matrix.shape[1])
+
+
+@dataclass
 class AlignedFusionSplit:
     """One split with EHR rows and note vectors in exactly the same order."""
 
@@ -91,6 +109,29 @@ def load_aligned_fusion_split(
     split: str,
 ) -> AlignedFusionSplit:
     """Load one split and align note vectors by identity, never incidental order."""
+    ehr = load_ehr_split(ehr_dir, split)
+    embeddings, embedding_index, _ = load_embedding_artifact(embedding_dir)
+    aligned_embeddings, _ = _aligned_embedding_rows(
+        ehr.index,
+        embeddings,
+        embedding_index,
+    )
+    if aligned_embeddings.shape[0] != ehr.rows:
+        raise ValueError(f"Aligned embedding rows disagree for split {split}")
+    return AlignedFusionSplit(
+        split=split,
+        ehr_matrix=ehr.ehr_matrix,
+        note_embeddings=aligned_embeddings,
+        labels=ehr.labels,
+        index=ehr.index,
+    )
+
+
+def load_ehr_split(
+    ehr_dir: str | Path,
+    split: str,
+) -> EHRModelSplit:
+    """Load and validate an EHR matrix, labels, and identity index."""
     if split not in SPLITS:
         raise ValueError(f"split must be one of {SPLITS}, received {split!r}")
     ehr_root = Path(ehr_dir).expanduser().resolve()
@@ -111,19 +152,9 @@ def load_aligned_fusion_split(
         raise ValueError(f"EHR labels and index labels disagree for split {split}")
     if not np.isin(labels, [0, 1]).all():
         raise ValueError(f"EHR labels are not binary for split {split}")
-
-    embeddings, embedding_index, _ = load_embedding_artifact(embedding_dir)
-    aligned_embeddings, _ = _aligned_embedding_rows(
-        index,
-        embeddings,
-        embedding_index,
-    )
-    if aligned_embeddings.shape[0] != rows:
-        raise ValueError(f"Aligned embedding rows disagree for split {split}")
-    return AlignedFusionSplit(
+    return EHRModelSplit(
         split=split,
         ehr_matrix=matrix,
-        note_embeddings=aligned_embeddings,
         labels=labels,
         index=index.loc[:, list(IDENTITY_COLUMNS)].reset_index(drop=True),
     )
@@ -152,14 +183,20 @@ def load_direct_feature_names(
     """Return the persisted EHR order followed by named embedding dimensions."""
     if embedding_features < 1:
         raise ValueError("embedding_features must be positive")
+    ehr_names = load_ehr_feature_names(ehr_dir)
+    note_names = [f"fullnote_embedding::{index:04d}" for index in range(embedding_features)]
+    return [*ehr_names, *note_names]
+
+
+def load_ehr_feature_names(ehr_dir: str | Path) -> list[str]:
+    """Load and validate the persisted structured-EHR feature order."""
     path = Path(ehr_dir).expanduser().resolve() / "feature_names.json"
     ehr_names = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(ehr_names, list) or not all(isinstance(name, str) for name in ehr_names):
         raise ValueError("EHR feature_names.json must contain a list of strings")
     if len(ehr_names) != len(set(ehr_names)):
         raise ValueError("EHR feature names are not unique")
-    note_names = [f"fullnote_embedding::{index:04d}" for index in range(embedding_features)]
-    return [*ehr_names, *note_names]
+    return ehr_names
 
 
 def validate_direct_feature_count(
